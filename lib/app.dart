@@ -1,9 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
 
 import 'core/app_colors.dart';
-import 'viewmodels/navigation_view_model.dart';
-import 'views/app_shell.dart';
+import 'views/pages/login_page.dart';
 
 class ConexaApp extends StatelessWidget {
   const ConexaApp({
@@ -29,9 +27,7 @@ class ConexaApp extends StatelessWidget {
       fontFamily: 'Inter',
     );
 
-    return ChangeNotifierProvider(
-      create: (_) => NavigationViewModel(),
-      child: MaterialApp(
+    return MaterialApp(
         title: 'Conexa — Consolidador de Cobrança',
         debugShowCheckedModeBanner: false,
         theme: base.copyWith(
@@ -107,11 +103,11 @@ class ConexaApp extends StatelessWidget {
             ),
           ),
         ),
-        home: AppShell(
+        home: LoginPage(
           processingPage: processingPage,
           commissionsPage: commissionsPage,
         ),
-      ),
-    );
+      );
   }
 }
+

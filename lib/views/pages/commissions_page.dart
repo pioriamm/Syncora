@@ -13,6 +13,7 @@ enum _GroupingSortMode { quantity, alphabetical }
 
 class _CommissionsPageState extends State<CommissionsPage> {
   static const _apiBase = 'https://alianca.conexa.app/index.php/api/v2';
+  static const _chargesEndpoint = 'charges';
   static const _apiToken =
       'a9e23e88f3283927119b49d8a8e91fd30d37cc8ea5f17b45470f23c0c10c0ae1';
   static const List<int> _pageSizeOptions = [10, 20, 30];
@@ -194,7 +195,27 @@ class _CommissionsPageState extends State<CommissionsPage> {
 
   String _cleanTenexValue(Object? value) {
     final text = value?.toString().trim() ?? '';
-    return normalizeKey(text) == 'null' ? '' : text;
+    if (normalizeKey(text) == 'null') return '';
+    return _fixMojibake(text);
+  }
+
+  /// Corrige textos cujos bytes Latin-1 foram armazenados como codepoints Unicode
+  /// (mojibake clássico de UTF-8 lido como Latin-1).
+  /// Ex: "FarmÃ¡cia" → "Farmácia", "AlemÃ£o" → "Alemão".
+  String _fixMojibake(String text) {
+    try {
+      // Se algum codeUnit > 0xFF, não é Latin-1 puro — devolve sem alterar
+      final bytes = <int>[];
+      for (final cu in text.codeUnits) {
+        if (cu > 0xFF) return text;
+        bytes.add(cu);
+      }
+      final fixed = utf8.decode(bytes, allowMalformed: false);
+      // Sanidade: se o resultado ficou maior (indica dupla conversão errada), mantém original
+      return fixed.length <= text.length ? fixed : text;
+    } catch (_) {
+      return text;
+    }
   }
 
   void _putTenexIndex(
@@ -278,7 +299,6 @@ class _CommissionsPageState extends State<CommissionsPage> {
       initialDate: initial.isAfter(last) ? last : initial,
       firstDate: first,
       lastDate: last,
-      locale: const Locale('pt', 'BR'),
     );
     if (picked == null || !mounted) return;
     setState(() {
@@ -294,6 +314,125 @@ class _CommissionsPageState extends State<CommissionsPage> {
   }
 
   // ── API fetch ──────────────────────────────────────────────────────────────
+
+  /// Faz uma requisição XHR autenticada. Lança Exception em caso de falha de rede
+  /// ou status != 200. Retorna o body decodificado como JSON.
+  Future<dynamic> _apiGet(String url) async {
+    final html.HttpRequest xhr;
+    try {
+      xhr = await html.HttpRequest.request(
+        url,
+        method: 'GET',
+        requestHeaders: {'Authorization': 'Bearer $_apiToken'},
+        withCredentials: false,
+      );
+    } catch (e) {
+      throw Exception(
+        'Erro de rede (possível bloqueio CORS). Execute o Chrome com '
+        '--disable-web-security para testes locais, ou solicite à equipe da API '
+        'que libere o header Access-Control-Allow-Origin. Detalhe: $e',
+      );
+    }
+    if ((xhr.status ?? 0) != 200) {
+      throw Exception('API retornou status ${xhr.status}');
+    }
+    return jsonDecode(xhr.responseText ?? '[]');
+  }
+
+  /// Extrai lista de itens e totalCount de uma resposta da API (lista direta ou wrapper).
+  ({List<dynamic> items, int? total}) _parseApiResponse(dynamic decoded) {
+    if (decoded is List) return (items: decoded, total: null);
+    if (decoded is Map) {
+      final inner = decoded['data'] ?? decoded['items'] ??
+          decoded['records'] ?? decoded['result'];
+      final total = decoded['totalCount'] ?? decoded['total'] ?? decoded['count'];
+      return (
+        items: inner is List ? inner : [],
+        total: total is int ? total : null,
+      );
+    }
+    return (items: [], total: null);
+  }
+
+  /// Busca todas as páginas de charges e retorna a lista completa.
+  Future<List<Map<String, dynamic>>> _fetchAllCharges(
+      String dateFrom, String dateTo) async {
+    final all = <Map<String, dynamic>>[];
+    var page = 1;
+    const limit = 100;
+
+    while (true) {
+      if (!mounted) return all;
+      setState(() => _status = 'Baixando cobranças (página $page)...');
+
+      final decoded = await _apiGet(
+        '$_apiBase/$_chargesEndpoint'
+        '?competenceDateFrom=$dateFrom&competenceDateTo=$dateTo'
+        '&limit=$limit&page=$page',
+      );
+      final (:items, :total) = _parseApiResponse(decoded);
+
+      if (total != null && _totalApiCount == 0) {
+        setState(() => _totalApiCount = total);
+      }
+      for (final item in items) {
+        if (item is Map<String, dynamic>) all.add(item);
+      }
+      if (items.length < limit) break;
+      page++;
+    }
+    return all;
+  }
+
+  /// Busca product.name para uma lista de customerIds via endpoint sales.
+  /// Envia em lotes de até 20 IDs por chamada.
+  Future<Map<String, String>> _fetchProductNames(
+    Set<String> customerIds,
+    String dateFrom,
+    String dateTo,
+  ) async {
+    final productByCustomerId = <String, String>{};
+    const batchSize = 20;
+    final ids = customerIds.toList();
+
+    for (var i = 0; i < ids.length; i += batchSize) {
+      if (!mounted) return productByCustomerId;
+      final batch = ids.skip(i).take(batchSize).toList();
+      final idParams = batch.map((id) => 'customerId[]=$id').join('&');
+      final url =
+          '$_apiBase/sales?$idParams&dateFrom=$dateFrom&dateTo=$dateTo&limit=100';
+
+      setState(() =>
+          _status = 'Buscando serviço/item (${i + batch.length}/${ids.length} clientes)...');
+
+      try {
+        var salesPage = 1;
+        while (true) {
+          final decoded = await _apiGet(
+            '$url&page=$salesPage',
+          );
+          final (:items, total: _) = _parseApiResponse(decoded);
+          for (final item in items) {
+            if (item is! Map<String, dynamic>) continue;
+            final cId = item['customerId']?.toString() ?? '';
+            if (cId.isEmpty || productByCustomerId.containsKey(cId)) continue;
+            final product = item['product'];
+            final name = product is Map
+                ? (product['name']?.toString() ?? '')
+                : '';
+            if (name.isNotEmpty) productByCustomerId[cId] = name;
+          }
+          if (items.length < 100) break;
+          salesPage++;
+        }
+      } catch (_) {
+        // Ignora erros parciais — o campo ficará N/A para os clientes afetados
+      }
+
+      await Future<void>.delayed(Duration.zero);
+    }
+    return productByCustomerId;
+  }
 
   Future<void> _fetchFromApi() async {
     final rangeError = _validateDateRange();
@@ -317,85 +456,52 @@ class _CommissionsPageState extends State<CommissionsPage> {
     final tenexById = _buildTenexIndex();
 
     try {
-      var apiPage = 1;
-      const limit = 100;
+      // 1. Busca todos os charges
+      final allCharges = await _fetchAllCharges(dateFrom, dateTo);
+      if (!mounted) return;
 
-      while (true) {
-        if (!mounted) return;
-        setState(() => _status =
-            'Baixando dados da API (página $apiPage)...');
+      if (allCharges.isEmpty) {
+        setState(() {
+          _loading = false;
+          _status = 'Nenhum registro encontrado para o período selecionado.';
+        });
+        return;
+      }
 
-        final uri = Uri.parse(
-          '$_apiBase/sales?dateFrom=$dateFrom&dateTo=$dateTo&limit=$limit&page=$apiPage',
+      // 2. Busca product.name via endpoint sales (por customerId)
+      final uniqueCustomerIds = allCharges
+          .map((c) => c['customerId']?.toString() ?? '')
+          .where((id) => id.isNotEmpty)
+          .toSet();
+      final productByCustomerId =
+          await _fetchProductNames(uniqueCustomerIds, dateFrom, dateTo);
+      if (!mounted) return;
+
+      // 3. Monta e exibe as linhas progressivamente
+      setState(() {
+        _totalApiCount = allCharges.length;
+        _status = 'Processando ${allCharges.length} registros...';
+      });
+
+      for (var i = 0; i < allCharges.length; i++) {
+        final row = _mapApiItemToRow(
+          allCharges[i],
+          tenexById,
+          productByCustomerId,
         );
-        final response = await http.get(
-          uri,
-          headers: {'Authorization': 'Bearer $_apiToken'},
-        );
-
         if (!mounted) return;
-
-        if (response.statusCode != 200) {
-          setState(() {
-            _loading = false;
-            _hasError = true;
-            _status =
-                'Erro na API: status ${response.statusCode}. Verifique o token ou o período.';
-          });
-          return;
-        }
-
-        final decoded = jsonDecode(response.body);
-        final List<dynamic> items;
-
-        if (decoded is List) {
-          items = decoded;
-        } else if (decoded is Map) {
-          final inner = decoded['data'] ?? decoded['items'] ??
-              decoded['records'] ?? decoded['result'];
-          if (inner is List) {
-            items = inner;
-          } else {
-            items = [];
-          }
-          final total = decoded['totalCount'] ?? decoded['total'] ??
-              decoded['count'];
-          if (total is int && _totalApiCount == 0) {
-            setState(() => _totalApiCount = total);
-          }
-        } else {
-          items = [];
-        }
-
-        if (items.isEmpty) break;
-
-        for (final raw in items) {
-          if (raw is! Map<String, dynamic>) continue;
-          final row = _mapApiItemToRow(raw, tenexById);
-          if (!mounted) return;
-          setState(() {
-            _rows = [..._rows, row];
-            _fetchedCount = _rows.length;
-            _status = _totalApiCount > 0
-                ? 'Processando: $_fetchedCount de $_totalApiCount registros...'
-                : 'Processando: $_fetchedCount registros...';
-          });
-          // yield to UI every 20 rows
-          if (_fetchedCount % 20 == 0) {
-            await Future<void>.delayed(Duration.zero);
-          }
-        }
-
-        if (items.length < limit) break;
-        apiPage++;
+        setState(() {
+          _rows = [..._rows, row];
+          _fetchedCount = _rows.length;
+          _status = 'Processando: $_fetchedCount de $_totalApiCount registros...';
+        });
+        if (i % 20 == 0) await Future<void>.delayed(Duration.zero);
       }
 
       if (!mounted) return;
       setState(() {
         _loading = false;
-        _status = _rows.isEmpty
-            ? 'Nenhum registro encontrado para o período selecionado.'
-            : 'Consulta concluída: ${_rows.length} registros encontrados.';
+        _status = 'Consulta concluída: ${_rows.length} registros encontrados.';
       });
     } catch (e) {
       if (!mounted) return;
@@ -410,6 +516,7 @@ class _CommissionsPageState extends State<CommissionsPage> {
   AdminCobrancaRow _mapApiItemToRow(
     Map<String, dynamic> item,
     Map<String, Map<String, String>> tenexById,
+    Map<String, String> productByCustomerId,
   ) {
     final customerId = item['customerId']?.toString() ?? '';
     final tenex = customerId.isNotEmpty
@@ -417,17 +524,15 @@ class _CommissionsPageState extends State<CommissionsPage> {
         : null;
 
     final razaoSocial = _tenexValueOrCurrent(tenex, 'razaoSocial', '');
-    final cnpj = _tenexValueOrCurrent(tenex, 'cnpj', '');
+    final cnpj = _formatCnpj(_tenexValueOrCurrent(tenex, 'cnpj', ''));
     final grupo = _tenexValueOrCurrent(tenex, 'grupo', '');
     final parceiro = _tenexValueOrCurrent(tenex, 'parceiro', '');
     final vendedor = _tenexValueOrCurrent(tenex, 'vendedor', '');
     final customSistema = _tenexValueOrCurrent(tenex, 'customSistema', '');
     final percentualComissao = _tenexValueOrCurrent(tenex, 'percentualComissao', '');
 
-    final product = item['product'];
-    final servicoItem = product is Map
-        ? (product['name']?.toString() ?? '')
-        : (item['productName']?.toString() ?? '');
+    // product.name vem do endpoint sales, buscado separadamente por customerId
+    final servicoItem = _normalizeServiceItem(productByCustomerId[customerId] ?? '');
 
     final rawAmount = item['amount'];
     final rawPaid = item['paidAmount'];
@@ -1197,6 +1302,23 @@ class _CommissionsPageState extends State<CommissionsPage> {
   }
 
   // ── Formatting helpers ─────────────────────────────────────────────────────
+
+  String _formatCnpj(String raw) {
+    final digits = digitsOnly(raw);
+    if (digits.length == 14) {
+      return '${digits.substring(0, 2)}.${digits.substring(2, 5)}.${digits.substring(5, 8)}/${digits.substring(8, 12)}-${digits.substring(12)}';
+    }
+    if (digits.length == 11) {
+      return '${digits.substring(0, 3)}.${digits.substring(3, 6)}.${digits.substring(6, 9)}-${digits.substring(9)}';
+    }
+    return raw;
+  }
+
+  String _normalizeServiceItem(String raw) {
+    if (raw.trim().isEmpty) return '';
+    if (normalizeKey(raw).contains('mensal')) return 'Mensal';
+    return raw;
+  }
 
   String _formatGridValue(String column, String value) {
     const moneyColumns = {'Valor', 'Valor Recebido'};
