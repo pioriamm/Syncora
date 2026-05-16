@@ -14,7 +14,6 @@ import 'package:package_info_plus/package_info_plus.dart';
 import '../../core/app_colors.dart';
 import '../../core/base_tenex.dart';
 import '../../core/partner_commission_rates.dart';
-import '../../models/linha_detalhe_tenex.dart';
 import '../../models/movidesk_models.dart';
 import '../../models/step_status.dart';
 import '../../services/movidesk_api_service.dart';

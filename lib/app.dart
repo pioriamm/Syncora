@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 
 import 'core/app_colors.dart';
 import 'views/pages/login_page.dart';
@@ -30,6 +31,13 @@ class ConexaApp extends StatelessWidget {
     return MaterialApp(
         title: 'Conexa — Consolidador de Cobrança',
         debugShowCheckedModeBanner: false,
+        localizationsDelegates: const [
+          GlobalMaterialLocalizations.delegate,
+          GlobalWidgetsLocalizations.delegate,
+          GlobalCupertinoLocalizations.delegate,
+        ],
+        supportedLocales: const [Locale('pt', 'BR')],
+        locale: const Locale('pt', 'BR'),
         theme: base.copyWith(
           textTheme: base.textTheme
               .apply(

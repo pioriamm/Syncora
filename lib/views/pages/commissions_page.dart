@@ -1590,7 +1590,8 @@ class _CommissionsPageState extends State<CommissionsPage> {
     final totalsByCategory = <String, _ConsolidadoTotais>{};
     for (final row in transactions) {
       final serviceItem = row.values['Serviço/Item'] ?? '';
-      final category = _serviceGroupLabel(serviceItem);
+      // Usa o valor já normalizado do grid como categoria; fallback 'Outros' se vazio
+      final category = serviceItem.trim().isEmpty ? 'Outros' : serviceItem.trim();
       final carteira = _parseMoney(row.values['Valor'] ?? '');
       final recebido = _parseMoney(row.values['Valor Recebido'] ?? '');
       final status = row.values['Status'] ?? '';
@@ -1757,7 +1758,8 @@ class _CommissionsPageState extends State<CommissionsPage> {
     required excel.Sheet sheet,
     required List<AdminCobrancaRow> transactions,
   }) {
-    final detailsColumns = [..._gridColumns, '% Comissão', 'Comissão'];
+    // '% Comissão' já está em _gridColumns — apenas acrescenta 'Comissão' (R$)
+    final detailsColumns = [..._gridColumns, 'Comissão'];
     for (var c = 0; c < detailsColumns.length; c++) {
       sheet
           .cell(excel.CellIndex.indexByColumnRow(columnIndex: c, rowIndex: 0))
@@ -1794,16 +1796,6 @@ class _CommissionsPageState extends State<CommissionsPage> {
 
   bool _isStatusQuitado(String status) =>
       normalizeKey(status).contains('quitad');
-
-  String _serviceGroupLabel(String rawService) {
-    final n = normalizeKey(rawService).replaceAll('º', 'o');
-    if (n.contains('adesao')) return 'Adesão';
-    if (n.contains('1o') || n.contains('primeira') || n.contains('1 recorrencia')) {
-      return '1° Mensalidade';
-    }
-    if (n.contains('recorrencia') || n.contains('mensal')) return 'Mensal';
-    return rawService.trim().isEmpty ? 'Outros' : _capitalizeWords(rawService);
-  }
 
   double _parseMoney(String raw) {
     var value = raw.trim().replaceAll('R\$', '').replaceAll(RegExp(r'\s+'), '').replaceAll(RegExp(r'[^0-9,.\-]'), '');
