@@ -5,17 +5,21 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="d7740967-29ea-473e-a836-81c397c5acab" name="Changes" comment="projeto atualizado">
+      <change beforePath="$PROJECT_DIR$/.dart_tool/dartpad/web_plugin_registrant.dart" beforeDir="false" afterPath="$PROJECT_DIR$/.dart_tool/dartpad/web_plugin_registrant.dart" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.dart_tool/package_config.json" beforeDir="false" afterPath="$PROJECT_DIR$/.dart_tool/package_config.json" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.dart_tool/package_graph.json" beforeDir="false" afterPath="$PROJECT_DIR$/.dart_tool/package_graph.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.dart_tool/version" beforeDir="false" afterPath="$PROJECT_DIR$/.dart_tool/version" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.flutter-plugins-dependencies" beforeDir="false" afterPath="$PROJECT_DIR$/.flutter-plugins-dependencies" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/libraries/Dart_Packages.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/libraries/Dart_Packages.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/libraries/Dart_SDK.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/libraries/Dart_SDK.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/libraries/Flutter_Plugins.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/libraries/Flutter_Plugins.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/build/b44ad850485d0f0012d14b9f6b06081b/.filecache" beforeDir="false" afterPath="$PROJECT_DIR$/build/b44ad850485d0f0012d14b9f6b06081b/.filecache" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/build/b44ad850485d0f0012d14b9f6b06081b/dart_build_result.json" beforeDir="false" afterPath="$PROJECT_DIR$/build/b44ad850485d0f0012d14b9f6b06081b/dart_build_result.json" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/build/flutter_assets/NOTICES" beforeDir="false" afterPath="$PROJECT_DIR$/build/flutter_assets/NOTICES" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/lib/app.dart" beforeDir="false" afterPath="$PROJECT_DIR$/lib/app.dart" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/lib/core/home_page_helpers.dart" beforeDir="false" afterPath="$PROJECT_DIR$/lib/core/home_page_helpers.dart" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/lib/views/pages/commissions_page.dart" beforeDir="false" afterPath="$PROJECT_DIR$/lib/views/pages/commissions_page.dart" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/lib/views/pages/home_pages.dart" beforeDir="false" afterPath="$PROJECT_DIR$/lib/views/pages/home_pages.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/build/flutter_assets/shaders/ink_sparkle.frag" beforeDir="false" afterPath="$PROJECT_DIR$/build/flutter_assets/shaders/ink_sparkle.frag" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/build/flutter_assets/shaders/stretch_effect.frag" beforeDir="false" afterPath="$PROJECT_DIR$/build/flutter_assets/shaders/stretch_effect.frag" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/build/native_hooks/.last_build_id" beforeDir="false" afterPath="$PROJECT_DIR$/build/native_hooks/.last_build_id" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ios/Runner/GeneratedPluginRegistrant.h" beforeDir="false" afterPath="$PROJECT_DIR$/ios/Runner/GeneratedPluginRegistrant.h" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ios/Runner/GeneratedPluginRegistrant.m" beforeDir="false" afterPath="$PROJECT_DIR$/ios/Runner/GeneratedPluginRegistrant.m" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/pubspec.lock" beforeDir="false" afterPath="$PROJECT_DIR$/pubspec.lock" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/pubspec.yaml" beforeDir="false" afterPath="$PROJECT_DIR$/pubspec.yaml" afterDir="false" />
     </list>
@@ -36,12 +40,12 @@
     &quot;assignee&quot;: &quot;pioriamm&quot;
   }
 }</component>
-  <component name="GithubPullRequestsUISettings">{
-  &quot;selectedUrlAndAccountId&quot;: {
-    &quot;url&quot;: &quot;https://github.com/pioriamm/auto_conexa.git&quot;,
-    &quot;accountId&quot;: &quot;2c67e165-2237-4ce5-a973-1103e8050631&quot;
+  <component name="GithubPullRequestsUISettings"><![CDATA[{
+  "selectedUrlAndAccountId": {
+    "url": "https://github.com/pioriamm/auto_conexa.git",
+    "accountId": "70da4c45-d6d7-476e-b892-69e48c4073be"
   }
-}</component>
+}]]></component>
   <component name="ProjectColorInfo">{
   &quot;associatedIndex&quot;: 1,
   &quot;fromUser&quot;: false

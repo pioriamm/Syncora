@@ -1,0 +1,1 @@
+ C:\\Users\\marcelo.santos\\StudioProjects\\auto_conexa\\.dart_tool\\flutter_build\\ba204cc64033348b970243c098d72dcc\\dart_build_result.json: 
