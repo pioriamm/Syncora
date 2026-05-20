@@ -881,10 +881,10 @@ class _CommissionsPageState extends State<CommissionsPage> {
 
   Widget _buildDateRangePicker() {
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
         color: AppColors.surface,
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(16),
         border: Border.all(color: AppColors.border),
         boxShadow: const [
           BoxShadow(
@@ -900,7 +900,7 @@ class _CommissionsPageState extends State<CommissionsPage> {
           Expanded(child: _buildDateField(isStart: true)),
           const SizedBox(width: 16),
           Expanded(child: _buildDateField(isStart: false)),
-          const SizedBox(width: 20),
+          const SizedBox(width: 16),
           SizedBox(
             height: 48,
             child: FilledButton.icon(
@@ -915,6 +915,11 @@ class _CommissionsPageState extends State<CommissionsPage> {
                   : const Icon(Icons.search, size: 18),
               label: Text(_loading ? 'Buscando...' : 'Buscar'),
               style: FilledButton.styleFrom(
+                backgroundColor: const Color(0xFF0C3D46),
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
                 padding:
                     const EdgeInsets.symmetric(horizontal: 24, vertical: 0),
               ),
@@ -958,8 +963,8 @@ class _CommissionsPageState extends State<CommissionsPage> {
             height: 48,
             padding: const EdgeInsets.symmetric(horizontal: 14),
             decoration: BoxDecoration(
-              color: AppColors.surfaceAlt,
-              borderRadius: BorderRadius.circular(10),
+              color: const Color(0xFFF1F2EE),
+              borderRadius: BorderRadius.circular(12),
               border: Border.all(
                 color: _hasError && date == null
                     ? AppColors.danger
@@ -973,7 +978,7 @@ class _CommissionsPageState extends State<CommissionsPage> {
                   size: 16,
                   color: date != null
                       ? AppColors.primary
-                      : AppColors.textMuted,
+                      : const Color(0xFFADB5BD),
                 ),
                 const SizedBox(width: 10),
                 Expanded(
@@ -986,7 +991,7 @@ class _CommissionsPageState extends State<CommissionsPage> {
                       fontSize: 14,
                       color: date != null
                           ? AppColors.textPrimary
-                          : AppColors.textMuted,
+                          : const Color(0xFFADB5BD),
                     ),
                   ),
                 ),
