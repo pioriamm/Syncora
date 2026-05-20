@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 import 'package:provider/provider.dart';
 
 import '../../core/app_colors.dart';
@@ -30,6 +31,23 @@ class _LoginPageState extends State<LoginPage> {
   bool _obscurePass = true;
   bool _loading = false;
   String? _errorMessage;
+  String _appVersion = '';
+
+  @override
+  void initState() {
+    super.initState();
+    _loadAppVersion();
+  }
+
+  Future<void> _loadAppVersion() async {
+    final packageInfo = await PackageInfo.fromPlatform();
+    if (!mounted) return;
+    setState(() {
+      _appVersion = packageInfo.buildNumber.isNotEmpty
+          ? '${packageInfo.version}+${packageInfo.buildNumber}'
+          : packageInfo.version;
+    });
+  }
 
   @override
   void dispose() {
@@ -245,6 +263,18 @@ class _LoginPageState extends State<LoginPage> {
                       ),
               ),
             ),
+            if (_appVersion.isNotEmpty) ...[
+              const SizedBox(height: 12),
+              Text(
+                'Versão $_appVersion',
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  fontFamily: 'Inter',
+                  fontSize: 12,
+                  color: AppColors.textSecondary,
+                ),
+              ),
+            ],
           ],
         ),
       ),
