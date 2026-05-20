@@ -211,6 +211,7 @@ Future<Map<String, LocalizaRow>> parseLocalizaBytes(
       map.putIfAbsent(
         cnpj,
         () => LocalizaRow(
+          idCliente: '',
           cnpj: cnpj,
           grupo: _cellValue(row, grupoCol),
           modalidade: _cellValue(row, modalidadeCol),
@@ -283,6 +284,7 @@ Future<List<ConexaRow>> parseConexaBytes(
       rows.add(
         ConexaRow(
           idCobranca: _cellValue(row, idCol),
+          idCliente: '',
           cpfCnpj: cpfCnpj,
           razaoSocialCliente: _cellValue(row, razaoCol),
           valor: _cellValue(row, valorCol),
@@ -476,6 +478,7 @@ Future<Map<String, LocalizaRow>> parseLocalizaCsvBytes(
       map.putIfAbsent(
         cnpj,
         () => LocalizaRow(
+          idCliente: '',
           cnpj: cnpj,
           grupo: _csvField(row, grupoCol),
           modalidade: _csvField(row, modalidadeCol),
@@ -547,6 +550,7 @@ Future<List<ConexaRow>> parseConexaCsvBytes(
       rows.add(
         ConexaRow(
           idCobranca: _csvField(row, idCol),
+          idCliente: '',
           cpfCnpj: cpfCnpj,
           razaoSocialCliente: _csvField(row, razaoCol),
           valor: _csvField(row, valorCol),
