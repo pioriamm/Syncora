@@ -659,7 +659,9 @@ class _ProcessingPageState extends State<ProcessingPage>
                     children: [
                       _buildIntro(),
                       const SizedBox(height: 24),
-                      _buildStepCards(),
+                      _buildDateRangePicker(),
+                      const SizedBox(height: 16),
+                      _buildActionButtons(),
                       const SizedBox(height: 24),
                       _buildStatusBar(),
                       if (_hasError && _status.isNotEmpty) ...[
@@ -816,6 +818,106 @@ class _ProcessingPageState extends State<ProcessingPage>
     );
   }
 
+
+
+  Widget _buildDateRangePicker() {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppColors.border),
+      ),
+      child: Row(
+        children: [
+          Expanded(child: _buildDateField(isStart: true)),
+          const SizedBox(width: 12),
+          Expanded(child: _buildDateField(isStart: false)),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDateField({required bool isStart}) {
+    final date = isStart ? _startDate : _endDate;
+    final label = isStart ? 'Data inicial' : 'Data final';
+    final text = date == null
+        ? 'Selecionar data'
+        : '${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')}/${date.year}';
+
+    return InkWell(
+      onTap: _loading ? null : () async {
+        final now = DateTime.now();
+        final initial = date ?? now;
+        final picked = await showDatePicker(
+          context: context,
+          initialDate: initial,
+          firstDate: DateTime(2020),
+          lastDate: DateTime(now.year + 1),
+        );
+        if (picked == null) return;
+        setState(() {
+          if (isStart) {
+            _startDate = DateTime(picked.year, picked.month, picked.day);
+            if (_endDate != null && _endDate!.isBefore(_startDate!)) {
+              _endDate = _startDate;
+            }
+          } else {
+            _endDate = DateTime(picked.year, picked.month, picked.day);
+          }
+        });
+      },
+      borderRadius: BorderRadius.circular(10),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+        decoration: BoxDecoration(
+          color: AppColors.surfaceAlt,
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: AppColors.border),
+        ),
+        child: Row(
+          children: [
+            const Icon(Icons.date_range_outlined, color: AppColors.textSecondary, size: 18),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(label, style: const TextStyle(fontFamily: 'Inter', fontSize: 11, color: AppColors.textMuted)),
+                  const SizedBox(height: 2),
+                  Text(text, style: const TextStyle(fontFamily: 'Inter', fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildActionButtons() {
+    return Wrap(
+      spacing: 12,
+      runSpacing: 12,
+      children: [
+        ElevatedButton.icon(
+          onPressed: (_loading || _loadingLocaliza || _loadingConexa) ? null : () => _pickFile(true),
+          icon: const Icon(Icons.table_view_outlined),
+          label: Text(_localizaName == null ? 'Base Localiza' : 'Trocar Base Localiza'),
+        ),
+        ElevatedButton.icon(
+          onPressed: (_loading || _loadingLocaliza || _loadingConexa || _localizaRows == null) ? null : () => _pickFile(false),
+          icon: const Icon(Icons.receipt_long_outlined),
+          label: Text(_conexaName == null ? 'Planilha Conexa' : 'Trocar Planilha Conexa'),
+        ),
+        FilledButton.icon(
+          onPressed: (_loading || _loadingLocaliza || _loadingConexa || _localizaRows == null || _conexaRows == null) ? null : _process,
+          icon: const Icon(Icons.auto_awesome_outlined),
+          label: Text(_resultRows.isEmpty ? 'Processar' : 'Processar novamente'),
+        ),
+      ],
+    );
+  }
   Widget _buildStepCards() {
     return LayoutBuilder(
       builder: (context, constraints) {
