@@ -362,7 +362,7 @@ class _ProcessingPageState extends State<ProcessingPage>
       final openedTicketsByCnpj = <String, MovideskTicketInfo>{};
       final from = _startDate!.toIso8601String().split('T').first;
       final to = _endDate!.toIso8601String().split('T').first;
-      final decoded = await _apiGet('$_apiBase/charges?competenceDateFrom=$from&competenceDateTo=$to&limit=100');
+      final decoded = await _apiGet('$_apiBase/charges?status=unpaid&dueDateFrom=$from&dueDateTo=$to&limit=100');
       final chargeItems = _parseApiResponse(decoded).items;
 
       for (final item in chargeItems.whereType<Map>()) {
