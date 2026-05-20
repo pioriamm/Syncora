@@ -322,10 +322,17 @@ class _ProcessingPageState extends State<ProcessingPage>
   }
 
   Future<void> _process() async {
-    if (_localizaRows == null || _startDate == null || _endDate == null) {
+    if (_startDate == null || _endDate == null) {
       setState(() {
         _hasError = true;
         _status = 'Selecione data inicial e final antes de processar.';
+      });
+      return;
+    }
+    if (_localizaRows == null || _conexaRows == null) {
+      setState(() {
+        _hasError = true;
+        _status = 'Envie as planilhas Localiza e Conexa antes de buscar.';
       });
       return;
     }
@@ -901,7 +908,9 @@ class _ProcessingPageState extends State<ProcessingPage>
       runSpacing: 12,
       children: [
         FilledButton.icon(
-          onPressed: (_loading || _loadingLocaliza || _loadingConexa || _localizaRows == null || _conexaRows == null) ? null : _process,
+          onPressed: (_loading || _loadingLocaliza || _loadingConexa)
+              ? null
+              : _process,
           icon: const Icon(Icons.search),
           label: Text(_resultRows.isEmpty ? 'Buscar' : 'Buscar novamente'),
         ),
