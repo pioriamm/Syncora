@@ -355,6 +355,7 @@ class OutputRow {
     required this.cobrar,
     required this.emails,
     required this.telefone,
+    required this.servicoItem,
   });
 
   final String idCobranca;
@@ -374,6 +375,7 @@ class OutputRow {
   final String cobrar;
   final String emails;
   final String telefone;
+  final String servicoItem;
 }
 
 class AdminCobrancaRow {

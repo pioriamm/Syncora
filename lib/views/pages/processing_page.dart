@@ -125,6 +125,29 @@ class _ProcessingPageState extends State<ProcessingPage>
     return (items: [], total: null);
   }
 
+  Future<Map<String, String>> _fetchCustomerDetailsById(String customerId) async {
+    if (customerId.trim().isEmpty) return const {};
+    try {
+      final decoded = await _apiGet('$_apiBase/customer/$customerId');
+      if (decoded is! Map) return const {};
+      final legalPerson = decoded['legalPerson'];
+      final cnpj = legalPerson is Map ? (legalPerson['cnpj'] ?? '').toString() : '';
+      final name = (decoded['name'] ?? decoded['businessName'] ?? '').toString();
+      final emailsRaw = decoded['emailsMessage'];
+      final phonesRaw = decoded['phones'];
+      String email = '';
+      if (emailsRaw is List && emailsRaw.isNotEmpty) email = emailsRaw.first.toString();
+      String phone = '';
+      if (phonesRaw is List && phonesRaw.isNotEmpty) {
+        final first = phonesRaw.first;
+        phone = first is Map ? (first['number'] ?? '').toString() : first.toString();
+      }
+      return {'cnpj': cnpj, 'name': name, 'email': email, 'phone': phone};
+    } catch (_) {
+      return const {};
+    }
+  }
+
   @override
   void dispose() {
     _processTimer?.cancel();
@@ -379,6 +402,10 @@ class _ProcessingPageState extends State<ProcessingPage>
         final customerId = (item['customerId'] ?? '').toString();
         final salesDecoded = await _apiGet('$_apiBase/sales?customerId[]=$customerId&limit=100');
         final salesItems = _parseApiResponse(salesDecoded).items;
+        final serviceItem = salesItems
+            .whereType<Map>()
+            .map((sale) => ((sale['product'] as Map?)?['name'] ?? '').toString().trim())
+            .firstWhere((name) => name.isNotEmpty, orElse: () => '');
         final hasAllowedProduct = salesItems.whereType<Map>().any((sale) {
           final productName = normalizeKey(((sale['product'] as Map?)?['name'] ?? '').toString());
           return productName.isNotEmpty && !productName.contains('servico de adesao');
@@ -390,19 +417,28 @@ class _ProcessingPageState extends State<ProcessingPage>
         final cnpjFromApi = (item['cpfCnpj'] ?? item['document'] ?? '').toString();
         final razaoFromApi =
             (item['businessName'] ?? item['customerName'] ?? '').toString();
+        final customerDetails = await _fetchCustomerDetailsById(customerId);
         final row = ConexaRow(
           idCobranca: chargeId,
           idCliente: customerId,
           cpfCnpj: (localizaByCustomerId?.cnpj ?? '').isNotEmpty
               ? localizaByCustomerId?.cnpj ?? ""
-              : cnpjFromApi,
+              : (customerDetails['cnpj'] ?? '').trim().isNotEmpty
+                  ? customerDetails['cnpj']!
+                  : cnpjFromApi,
           razaoSocialCliente: (localizaByCustomerId?.razaoSocial ?? '').isNotEmpty
               ? localizaByCustomerId?.razaoSocial ?? ""
-              : razaoFromApi,
+              : (customerDetails['name'] ?? '').trim().isNotEmpty
+                  ? customerDetails['name']!
+                  : razaoFromApi,
           valor: (item['amount'] ?? item['value'] ?? '').toString(),
           vencimento: (item['dueDate'] ?? item['vencimento'] ?? '').toString(),
-          emails: (item['email'] ?? '').toString(),
-          telefone: (item['phone'] ?? '').toString(),
+          emails: (item['email'] ?? '').toString().trim().isNotEmpty
+              ? (item['email'] ?? '').toString()
+              : (customerDetails['email'] ?? ''),
+          telefone: (item['phone'] ?? '').toString().trim().isNotEmpty
+              ? (item['phone'] ?? '').toString()
+              : (customerDetails['phone'] ?? ''),
         );
         fetchedConexaRows.add(row);
         final cnpjDigits = digitsOnly(row.cpfCnpj);
@@ -498,6 +534,7 @@ class _ProcessingPageState extends State<ProcessingPage>
           cobrar: cobrar,
           emails: normalizeEmails(row.emails),
           telefone: formatFirstPhone(row.telefone),
+          servicoItem: serviceItem,
         );
 
         if (!mounted) return;
@@ -628,6 +665,7 @@ class _ProcessingPageState extends State<ProcessingPage>
       'Ticket',
       'Status Ticket',
       'Ticket URL',
+      'Serviço/Item',
     ].map(escape).join(';'));
 
     for (final row in _resultRows) {
@@ -648,6 +686,7 @@ class _ProcessingPageState extends State<ProcessingPage>
         row.ticketId,
         row.ticketStatus,
         row.ticketMovideskUrl,
+        row.servicoItem,
       ].map(escape).join(';'));
     }
 
@@ -1716,6 +1755,7 @@ class _ProcessingPageState extends State<ProcessingPage>
                   DataColumn(label: Text('MODALIDADE')),
                   DataColumn(label: Text('EMAILS')),
                   DataColumn(label: Text('TELEFONE')),
+                  DataColumn(label: Text('SERVIÇO/ITEM')),
                   DataColumn(label: Text('TICKET')),
                 ],
                   rows: List.generate(pageRows.length, (index) {
@@ -1886,6 +1926,23 @@ class _ProcessingPageState extends State<ProcessingPage>
                           fontFamily: 'JetBrains Mono',
                           fontSize: 13,
                           color: AppColors.textSecondary,
+                        ),
+                      ),
+                    ),
+                    _buildCopyableDataCell(
+                      valueToCopy: row.servicoItem,
+                      child: ConstrainedBox(
+                        constraints: BoxConstraints(
+                          maxWidth: compact ? 180 : 240,
+                        ),
+                        child: Text(
+                          row.servicoItem,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            fontFamily: 'Inter',
+                            fontSize: 13,
+                            color: AppColors.textPrimary,
+                          ),
                         ),
                       ),
                     ),
