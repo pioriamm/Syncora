@@ -685,7 +685,6 @@ class _ProcessingPageState extends State<ProcessingPage>
       body: SafeArea(
         child: Column(
           children: [
-            _buildHeader(),
             Expanded(
               child: SingleChildScrollView(
                 child: Padding(
@@ -697,8 +696,7 @@ class _ProcessingPageState extends State<ProcessingPage>
                       const SizedBox(height: 24),
                       _buildDateRangePicker(),
                       const SizedBox(height: 16),
-                      _buildActionButtons(),
-                      const SizedBox(height: 24),
+
                       _buildStatusBar(),
                       if (_hasError && _status.isNotEmpty) ...[
                         const SizedBox(height: 16),
@@ -713,76 +711,6 @@ class _ProcessingPageState extends State<ProcessingPage>
             ),
           ],
         ),
-      ),
-    );
-  }
-
-  Widget _buildHeader() {
-    return Container(
-      decoration: const BoxDecoration(
-        color: AppColors.surface,
-        border: Border(
-          bottom: BorderSide(color: AppColors.border, width: 1),
-        ),
-      ),
-      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-      child: Row(
-        children: [
-          Container(
-            width: 36,
-            height: 36,
-            decoration: BoxDecoration(
-              color: AppColors.primary,
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: const Icon(
-              Icons.hub_outlined,
-              color: Colors.white,
-              size: 20,
-            ),
-          ),
-          const SizedBox(width: 12),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Conexa',
-                style: TextStyle(
-                  fontFamily: 'Inter',
-                  fontSize: 16,
-                  fontWeight: FontWeight.w700,
-                  color: AppColors.textPrimary,
-                  letterSpacing: -0.2,
-                  height: 1.1,
-                ),
-              ),
-              SizedBox(height: 2),
-              Text(
-                'Consolidador de Cobrança',
-                style: TextStyle(
-                  fontFamily: 'Inter',
-                  fontSize: 12,
-                  color: AppColors.textSecondary,
-                  height: 1.1,
-                ),
-              ),
-              if (_appVersion.isNotEmpty) ...[
-                SizedBox(height: 2),
-                Text(
-                  'v$_appVersion',
-                  style: TextStyle(
-                    fontFamily: 'Inter',
-                    fontSize: 11,
-                    color: AppColors.textMuted,
-                    height: 1.1,
-                  ),
-                ),
-              ],
-            ],
-          ),
-          const Spacer(),
-          _buildTopBadge(),
-        ],
       ),
     );
   }
@@ -829,7 +757,7 @@ class _ProcessingPageState extends State<ProcessingPage>
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const Text(
-          'Consolide cobranças e tickets em minutos',
+          'Cobranças',
           style: TextStyle(
             fontFamily: 'Inter',
             fontSize: 24,
@@ -841,8 +769,7 @@ class _ProcessingPageState extends State<ProcessingPage>
         ),
         const SizedBox(height: 6),
         const Text(
-          'Selecione o período e processe as cobranças via API — '
-          'os tickets do Movidesk são consultados automaticamente.',
+          'Selecione o período para as cobranças.',
           style: TextStyle(
             fontFamily: 'Inter',
             fontSize: 14,
@@ -869,6 +796,8 @@ class _ProcessingPageState extends State<ProcessingPage>
           Expanded(child: _buildDateField(isStart: true)),
           const SizedBox(width: 12),
           Expanded(child: _buildDateField(isStart: false)),
+          const SizedBox(width: 20),
+          _buildActionButtons(),
         ],
       ),
     );
@@ -936,12 +865,20 @@ class _ProcessingPageState extends State<ProcessingPage>
       spacing: 12,
       runSpacing: 12,
       children: [
-        FilledButton.icon(
-          onPressed: (_loading || _loadingLocaliza)
-              ? null
-              : _process,
-          icon: const Icon(Icons.search),
-          label: Text(_resultRows.isEmpty ? 'Buscar' : 'Buscar novamente'),
+        SizedBox(
+          width: 220,
+          height: 70,
+          child: FilledButton.icon(
+            onPressed: (_loading || _loadingLocaliza)
+                ? null
+                : _process,
+            icon: const Icon(Icons.search),
+            label: Text(
+              _resultRows.isEmpty
+                  ? 'Buscar'
+                  : 'Buscar novamente',
+            ),
+          ),
         ),
       ],
     );

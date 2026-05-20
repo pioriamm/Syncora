@@ -371,9 +371,8 @@ class _CommissionsPageState extends State<CommissionsPage> {
       if (!mounted) return all;
       setState(() => _status = 'Baixando cobranças (página $page)...');
 
-      final decoded = await _apiGet(
-        '$_apiBase/$_chargesEndpoint'
-        '?competenceDateFrom=$dateFrom&competenceDateTo=$dateTo'
+      final decoded = await _apiGet('$_apiBase/$_chargesEndpoint'
+        '?dueDateFrom=$dateFrom&dueDateTo=$dateTo'
         '&limit=$limit&page=$page',
       );
       final (:items, :total) = _parseApiResponse(decoded);
