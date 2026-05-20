@@ -131,6 +131,7 @@ class MovideskApiService {
     required String email,
     required String telefone,
     required DateTime? dataVencimento,
+    String actionDescription = 'ticket criado via automação',
   }) async {
     if (token.isEmpty) return null;
     final uri = Uri.https('api.movidesk.com', '/public/v1/tickets', {
@@ -168,7 +169,7 @@ class MovideskApiService {
         },
       ],
       'actions': [
-        {'type': 2, 'description': 'ticket criado via automação'}
+        {'type': 2, 'description': actionDescription}
       ],
     };
 
@@ -199,6 +200,7 @@ class MovideskApiService {
     required String email,
     required String telefone,
     required DateTime? dataVencimento,
+    String actionDescription = 'ticket criado via automação',
   }) async {
     final createdTicket = await createTicket(
       token: token,
@@ -209,6 +211,7 @@ class MovideskApiService {
       email: email,
       telefone: telefone,
       dataVencimento: dataVencimento,
+      actionDescription: actionDescription,
     );
     if (createdTicket?.id != null) {
       return createdTicket;

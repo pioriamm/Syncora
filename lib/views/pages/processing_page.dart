@@ -368,7 +368,8 @@ class _ProcessingPageState extends State<ProcessingPage>
       final localizaMap = _localizaRows!;
       final localizaMapById = _localizaRowsById ?? const <String, LocalizaRow>{};
       final fetchedConexaRows = <ConexaRow>[];
-      final openedTicketsByCnpj = <String, MovideskTicketInfo>{};
+      final openedTicketsByGroup = <String, MovideskTicketInfo>{};
+      final groupRowsSummary = <String, List<String>>{};
       final from = _startDate!.toIso8601String().split('T').first;
       final to = _endDate!.toIso8601String().split('T').first;
       final decoded = await _apiGet('$_apiBase/charges?status=unpaid&dueDateFrom=$from&dueDateTo=$to&limit=100');
@@ -408,6 +409,11 @@ class _ProcessingPageState extends State<ProcessingPage>
         final localiza = localizaByCustomerId != null
             ? localizaByCustomerId
             : localizaMap[cnpjDigits];
+        final groupName = (localiza?.grupo ?? '').trim();
+        final groupKey = normalizeKey(groupName);
+        final summary =
+            '- ID: ${row.idCobranca} | Cliente: ${row.idCliente} | CNPJ: ${row.cpfCnpj} | Razão: ${row.razaoSocialCliente} | Valor: ${formatReal(row.valor)} | Vencimento: ${formatDateBr(_parseFlexibleDate(row.vencimento)) ?? row.vencimento}';
+        groupRowsSummary.putIfAbsent(groupKey, () => <String>[]).add(summary);
         final modalidade = _resolveModalidade(localiza?.modalidade);
         final isWhiteLabel = _isWhiteLabel(modalidade);
         final regraCobranca = isWhiteLabel ? '3' : '7';
@@ -418,7 +424,7 @@ class _ProcessingPageState extends State<ProcessingPage>
 
         final dataVencimento = _parseFlexibleDate(row.vencimento);
 
-        MovideskTicketInfo? ticketInfo = openedTicketsByCnpj[cnpjDigits];
+        MovideskTicketInfo? ticketInfo = openedTicketsByGroup[groupKey];
         if (ticketInfo == null) {
           try {
             ticketInfo = await _movideskApiService.fetchTicketInfo(
@@ -426,7 +432,7 @@ class _ProcessingPageState extends State<ProcessingPage>
               _movideskToken,
             );
             if (ticketInfo?.id != null) {
-              openedTicketsByCnpj[cnpjDigits] = ticketInfo!;
+              openedTicketsByGroup[groupKey] = ticketInfo!;
             }
           } catch (_) {
             ticketInfo = null;
@@ -446,6 +452,7 @@ class _ProcessingPageState extends State<ProcessingPage>
                 ) ??
                 _fallbackMovideskPerson;
             final formattedDocument = formattedCnpj(cnpjDigits);
+            final rowsDescription = groupRowsSummary[groupKey]?.join('\n') ?? '';
             ticketInfo =
                 await _movideskApiService.createOrFetchTicketAfterCreate(
                       token: _movideskToken,
@@ -456,10 +463,13 @@ class _ProcessingPageState extends State<ProcessingPage>
                       email: normalizeEmails(row.emails),
                       telefone: formatFirstPhone(row.telefone),
                       dataVencimento: dataVencimento,
+                      actionDescription: rowsDescription.isEmpty
+                          ? 'ticket criado via automação'
+                          : 'ticket criado via automação\n\nLinhas do grupo:\n$rowsDescription',
                     ) ??
                     ticketInfo;
             if (ticketInfo?.id != null) {
-              openedTicketsByCnpj[cnpjDigits] = ticketInfo!;
+              openedTicketsByGroup[groupKey] = ticketInfo!;
             }
           } catch (_) {
             // Evita manter referência de ticket fechado quando a reabertura falhar.
@@ -473,7 +483,7 @@ class _ProcessingPageState extends State<ProcessingPage>
           cpfCnpj: row.cpfCnpj,
           razaoSocialCliente: row.razaoSocialCliente,
           valor: formatReal(row.valor),
-          vencimento: row.vencimento,
+          vencimento: formatDateBr(_parseFlexibleDate(row.vencimento)) ?? row.vencimento,
           prazoCobranca: regraCobranca,
           dataCobranca: formatDateBr(dataCobrancaDate) ?? '—',
           dataCobrancaTransferida: dataCobranca?.wasTransferred ?? false,
