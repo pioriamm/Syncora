@@ -13,6 +13,7 @@ class _ProcessingPageState extends State<ProcessingPage>
   String? _localizaName;
   String? _conexaName;
   Map<String, LocalizaRow>? _localizaRows;
+  Map<String, LocalizaRow>? _localizaRowsById;
   List<ConexaRow>? _conexaRows;
   DateTime? _startDate;
   DateTime? _endDate;
@@ -84,16 +85,23 @@ class _ProcessingPageState extends State<ProcessingPage>
     final decoded = baseTenexJson;
     if (decoded is! List) return;
     final map = <String, LocalizaRow>{};
+    final mapById = <String, LocalizaRow>{};
     for (final item in decoded.whereType<Map>()) {
+      final idCliente = (item['id'] ?? '').toString();
       final cnpj = digitsOnly((item['cnpj'] ?? '').toString());
-      if (cnpj.isEmpty) continue;
-      map[cnpj] = LocalizaRow(
+      if (idCliente.isEmpty && cnpj.isEmpty) continue;
+      final row = LocalizaRow(
+        idCliente: idCliente,
         cnpj: cnpj,
+        razaoSocial: (item['razao_social'] ?? '').toString(),
         grupo: (item['grupo'] ?? '').toString(),
         modalidade: (item['custom_sistema'] ?? '').toString(),
       );
+      if (cnpj.isNotEmpty) map[cnpj] = row;
+      if (idCliente.isNotEmpty) mapById[idCliente] = row;
     }
     _localizaRows = map;
+    _localizaRowsById = mapById;
   }
 
   Future<dynamic> _apiGet(String url) async {
@@ -358,6 +366,7 @@ class _ProcessingPageState extends State<ProcessingPage>
 
     try {
       final localizaMap = _localizaRows!;
+      final localizaMapById = _localizaRowsById ?? const <String, LocalizaRow>{};
       final fetchedConexaRows = <ConexaRow>[];
       final openedTicketsByCnpj = <String, MovideskTicketInfo>{};
       final from = _startDate!.toIso8601String().split('T').first;
@@ -375,10 +384,20 @@ class _ProcessingPageState extends State<ProcessingPage>
         });
         if (!hasAllowedProduct) continue;
 
+        final chargeId = (item['chargeId'] ?? item['id'] ?? '').toString();
+        final localizaByCustomerId = localizaMapById[customerId];
+        final cnpjFromApi = (item['cpfCnpj'] ?? item['document'] ?? '').toString();
+        final razaoFromApi =
+            (item['businessName'] ?? item['customerName'] ?? '').toString();
         final row = ConexaRow(
-          idCobranca: (item['id'] ?? '').toString(),
-          cpfCnpj: (item['cpfCnpj'] ?? item['document'] ?? '').toString(),
-          razaoSocialCliente: (item['businessName'] ?? item['customerName'] ?? '').toString(),
+          idCobranca: chargeId,
+          idCliente: customerId,
+          cpfCnpj: (localizaByCustomerId?.cnpj ?? '').isNotEmpty
+              ? localizaByCustomerId.cnpj
+              : cnpjFromApi,
+          razaoSocialCliente: (localizaByCustomerId?.razaoSocial ?? '').isNotEmpty
+              ? localizaByCustomerId.razaoSocial
+              : razaoFromApi,
           valor: (item['amount'] ?? item['value'] ?? '').toString(),
           vencimento: (item['dueDate'] ?? item['vencimento'] ?? '').toString(),
           emails: (item['email'] ?? '').toString(),
@@ -386,7 +405,9 @@ class _ProcessingPageState extends State<ProcessingPage>
         );
         fetchedConexaRows.add(row);
         final cnpjDigits = digitsOnly(row.cpfCnpj);
-        final localiza = localizaMap[cnpjDigits];
+        final localiza = localizaByCustomerId != null
+            ? localizaByCustomerId
+            : localizaMap[cnpjDigits];
         final modalidade = _resolveModalidade(localiza?.modalidade);
         final isWhiteLabel = _isWhiteLabel(modalidade);
         final regraCobranca = isWhiteLabel ? '3' : '7';
@@ -448,6 +469,7 @@ class _ProcessingPageState extends State<ProcessingPage>
 
         final output = OutputRow(
           idCobranca: row.idCobranca,
+          idCliente: row.idCliente,
           cpfCnpj: row.cpfCnpj,
           razaoSocialCliente: row.razaoSocialCliente,
           valor: formatReal(row.valor),
@@ -580,6 +602,7 @@ class _ProcessingPageState extends State<ProcessingPage>
     final buf = StringBuffer();
     buf.writeln([
       'ID da Cobrança',
+      'ID Cliente',
       'CPF/CNPJ',
       'Razão Social Cliente',
       'Valor',
@@ -599,6 +622,7 @@ class _ProcessingPageState extends State<ProcessingPage>
     for (final row in _resultRows) {
       buf.writeln([
         row.idCobranca,
+        row.idCliente,
         row.cpfCnpj,
         row.razaoSocialCliente,
         row.valor,
@@ -1732,6 +1756,7 @@ class _ProcessingPageState extends State<ProcessingPage>
                 dividerThickness: 1,
                 columns: const [
                   DataColumn(label: Text('ID COBRANÇA')),
+                  DataColumn(label: Text('ID CLIENTE')),
                   DataColumn(label: Text('CPF/CNPJ')),
                   DataColumn(label: Text('RAZÃO SOCIAL')),
                   DataColumn(label: Text('VALOR'), numeric: true),
@@ -1764,6 +1789,18 @@ class _ProcessingPageState extends State<ProcessingPage>
                           fontFamily: 'JetBrains Mono',
                           fontSize: 13,
                           color: AppColors.textPrimary,
+                        ),
+                      ),
+                    ),
+                    _buildCopyableDataCell(
+                      valueToCopy: row.idCliente,
+                      child: Text(
+                        row.idCliente,
+                        style: const TextStyle(
+                          fontFamily: 'JetBrains Mono',
+                          fontSize: 13,
+                          color: AppColors.textSecondary,
+                          fontFeatures: [FontFeature.tabularFigures()],
                         ),
                       ),
                     ),
