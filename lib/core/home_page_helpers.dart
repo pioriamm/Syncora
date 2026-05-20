@@ -213,6 +213,7 @@ Future<Map<String, LocalizaRow>> parseLocalizaBytes(
         () => LocalizaRow(
           idCliente: '',
           cnpj: cnpj,
+          razaoSocial: '',
           grupo: _cellValue(row, grupoCol),
           modalidade: _cellValue(row, modalidadeCol),
         ),
@@ -480,6 +481,7 @@ Future<Map<String, LocalizaRow>> parseLocalizaCsvBytes(
         () => LocalizaRow(
           idCliente: '',
           cnpj: cnpj,
+          razaoSocial: '',
           grupo: _csvField(row, grupoCol),
           modalidade: _csvField(row, modalidadeCol),
         ),
