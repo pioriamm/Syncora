@@ -26,6 +26,8 @@ class _CommissionsPageState extends State<CommissionsPage> {
     'Parceiro',
     'Vendedor',
     'Serviço/Item',
+    'Email',
+    'Telefone',
     'Custom Sistema',
     '% Comissão',
     'Valor',
@@ -40,6 +42,8 @@ class _CommissionsPageState extends State<CommissionsPage> {
     'Parceiro',
     'Vendedor',
     'Serviço/Item',
+    'Email',
+    'Telefone',
     'Custom Sistema',
     'Status',
   };
@@ -463,6 +467,14 @@ class _CommissionsPageState extends State<CommissionsPage> {
         final rawCnpj = legalPerson is Map
             ? (legalPerson['cnpj']?.toString() ?? '')
             : '';
+        final emailsMessage = decoded['emailsMessage'];
+        final email = emailsMessage is List && emailsMessage.isNotEmpty
+            ? emailsMessage.first?.toString() ?? ''
+            : '';
+        final phones = decoded['phones'];
+        final phone = phones is List && phones.isNotEmpty
+            ? phones.first?.toString() ?? ''
+            : '';
 
         // Tenta achar no tenex pelo CNPJ
         final cnpjDigits = digitsOnly(rawCnpj);
@@ -472,6 +484,8 @@ class _CommissionsPageState extends State<CommissionsPage> {
           name: name,
           cnpj: rawCnpj,
           tenex: tenex,
+          email: email,
+          phone: phone,
         );
       } catch (_) {
         // Se a chamada falhar, o cliente ficará sem enriquecimento
@@ -590,17 +604,18 @@ class _CommissionsPageState extends State<CommissionsPage> {
     String razaoSocial;
     String cnpj;
 
+    final apiData = customerApiData[customerId];
+
     if (tenex != null) {
       // Encontrado pelo ID — usa dados do tenex normalmente
       razaoSocial = _tenexValueOrCurrent(tenex, 'razaoSocial', '');
       cnpj = _formatCnpj(_tenexValueOrCurrent(tenex, 'cnpj', ''));
     } else {
       // 2ª tentativa: dados vindos do endpoint /customer/{id}
-      final apiData = customerApiData[customerId];
       // O tenex encontrado pelo CNPJ (já resolvido em _fetchCustomerDetails)
       tenex = apiData?.tenex;
-      razaoSocial = apiData?.name ?? '';
-      cnpj = _formatCnpj(apiData?.cnpj ?? '');
+      razaoSocial = _tenexValueOrCurrent(tenex, 'razaoSocial', apiData?.name ?? '');
+      cnpj = _formatCnpj(_tenexValueOrCurrent(tenex, 'cnpj', apiData?.cnpj ?? ''));
     }
 
     final grupo = _tenexValueOrCurrent(tenex, 'grupo', '');
@@ -632,6 +647,8 @@ class _CommissionsPageState extends State<CommissionsPage> {
       'Parceiro': parceiro,
       'Vendedor': vendedor,
       'Serviço/Item': servicoItem,
+      'Email': apiData?.email ?? '',
+      'Telefone': apiData?.phone ?? '',
       'Custom Sistema': customSistema,
       '% Comissão': percentualComissao,
       'Valor': _formatMoney(amount),
@@ -1854,10 +1871,14 @@ class _CustomerApiData {
     required this.name,
     required this.cnpj,
     required this.tenex,
+    required this.email,
+    required this.phone,
   });
   final String name;
   final String cnpj;
   final Map<String, String>? tenex;
+  final String email;
+  final String phone;
 }
 
 class _ConsolidadoTotais {
