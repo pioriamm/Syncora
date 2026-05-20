@@ -441,9 +441,10 @@ class _ProcessingPageState extends State<ProcessingPage>
 
         final shouldCreateNewTicket =
             ticketInfo?.id == null || _isTicketClosedStatus(ticketInfo!.status);
+        final isDueToday = _isToday(dataCobrancaDate);
+        final isOverdueByRule = _shouldPerformCharge(dataCobrancaDate);
         final shouldOpenTicketForCharge =
-            cobrar == 'Realizar cobrança' ||
-            (cobrar == 'Vence hoje' && _autoOpenTicketOnDueToday);
+            isOverdueByRule || (isDueToday && _autoOpenTicketOnDueToday);
         if (shouldOpenTicketForCharge && shouldCreateNewTicket) {
           try {
             final person = await _movideskApiService.fetchPersonByBusinessName(
