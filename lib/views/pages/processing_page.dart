@@ -329,10 +329,11 @@ class _ProcessingPageState extends State<ProcessingPage>
       });
       return;
     }
-    if (_localizaRows == null || _conexaRows == null) {
+    if (_localizaRows == null) {
       setState(() {
         _hasError = true;
-        _status = 'Envie as planilhas Localiza e Conexa antes de buscar.';
+        _status =
+            'Base Tenex não carregada. Recarregue a página e tente novamente.';
       });
       return;
     }
@@ -357,6 +358,7 @@ class _ProcessingPageState extends State<ProcessingPage>
 
     try {
       final localizaMap = _localizaRows!;
+      final fetchedConexaRows = <ConexaRow>[];
       final openedTicketsByCnpj = <String, MovideskTicketInfo>{};
       final from = _startDate!.toIso8601String().split('T').first;
       final to = _endDate!.toIso8601String().split('T').first;
@@ -382,6 +384,7 @@ class _ProcessingPageState extends State<ProcessingPage>
           emails: (item['email'] ?? '').toString(),
           telefone: (item['phone'] ?? '').toString(),
         );
+        fetchedConexaRows.add(row);
         final cnpjDigits = digitsOnly(row.cpfCnpj);
         final localiza = localizaMap[cnpjDigits];
         final modalidade = _resolveModalidade(localiza?.modalidade);
@@ -472,6 +475,8 @@ class _ProcessingPageState extends State<ProcessingPage>
 
       if (!mounted) return;
       setState(() {
+        _conexaRows = fetchedConexaRows;
+        _conexaName = 'API Charges + Sales';
         _status = '';
       });
     } on ProcessingException catch (e) {
@@ -759,8 +764,8 @@ class _ProcessingPageState extends State<ProcessingPage>
   }
 
   Widget _buildTopBadge() {
-    final ready = _localizaRows != null && _conexaRows != null;
-    final label = ready ? 'Pronto para processar' : 'Aguardando arquivos';
+    final ready = _localizaRows != null;
+    final label = ready ? 'Pronto para processar' : 'Aguardando base Tenex';
     final color = ready ? AppColors.success : AppColors.textMuted;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
@@ -908,7 +913,7 @@ class _ProcessingPageState extends State<ProcessingPage>
       runSpacing: 12,
       children: [
         FilledButton.icon(
-          onPressed: (_loading || _loadingLocaliza || _loadingConexa)
+          onPressed: (_loading || _loadingLocaliza)
               ? null
               : _process,
           icon: const Icon(Icons.search),
@@ -925,41 +930,30 @@ class _ProcessingPageState extends State<ProcessingPage>
           _buildStepCard(
             stepNumber: 1,
             icon: Icons.table_view_outlined,
-            title: 'Base Localiza',
-            description: 'Planilha com CNPJ/CPF, Grupo e Modalidade.',
+            title: 'Cobranças API',
+            description: 'Busca automática no endpoint charges por período.',
             status: StepStatus.pronto,
             filename: _localizaName,
             count: _localizaRows?.length,
             current: _localizaCurrent,
             total: _localizaTotal,
-            buttonLabel: _localizaName == null
-                ? 'Selecionar arquivo'
-                : 'Trocar arquivo',
-            onPressed: (_loading || _loadingLocaliza || _loadingConexa)
-                ? null
-                : () => _pickFile(true),
+            buttonLabel: 'Base Tenex carregada',
+            onPressed: null,
           ),
           _buildStepCard(
             stepNumber: 2,
             icon: Icons.receipt_long_outlined,
-            title: 'Planilha Conexa',
-            description: 'Lista de cobranças a consolidar.',
+            title: 'Conexa (API Sales)',
+            description: 'Filtro por customerId com regra de produto.',
             status: _conexaStatus,
             filename: _conexaName,
             count: _conexaRows?.length,
             current: _conexaCurrent,
             total: _conexaTotal,
-            buttonLabel: _conexaName == null
-                ? 'Selecionar arquivo'
-                : 'Trocar arquivo',
-            onPressed: (_loading ||
-                    _loadingLocaliza ||
-                    _loadingConexa ||
-                    _localizaRows == null)
-                ? null
-                : () => _pickFile(false),
+            buttonLabel: 'Consulta automática',
+            onPressed: null,
             disabledHint:
-                _localizaRows == null ? 'Envie a base Localiza primeiro.' : null,
+                _localizaRows == null ? 'Base Tenex indisponível.' : null,
           ),
           _buildStepCard(
             stepNumber: 3,
@@ -997,15 +991,11 @@ class _ProcessingPageState extends State<ProcessingPage>
                 ),
               ],
             ),
-            onPressed: (_loading ||
-                    _loadingLocaliza ||
-                    _loadingConexa ||
-                    _localizaRows == null ||
-                    _conexaRows == null)
+            onPressed: (_loading || _loadingLocaliza || _localizaRows == null)
                 ? null
                 : _process,
-            disabledHint: (_localizaRows == null || _conexaRows == null)
-                ? 'Envie as duas planilhas para habilitar.'
+            disabledHint: _localizaRows == null
+                ? 'Base Tenex indisponível.'
                 : null,
           ),
         ];
@@ -1593,7 +1583,7 @@ class _ProcessingPageState extends State<ProcessingPage>
           ),
           const SizedBox(height: 4),
           const Text(
-            'Envie as planilhas Localiza e Conexa e clique em Processar '
+            'Selecione o período e clique em Processar '
             'para ver os registros consolidados aqui.',
             textAlign: TextAlign.center,
             style: TextStyle(
