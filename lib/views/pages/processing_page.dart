@@ -900,20 +900,10 @@ class _ProcessingPageState extends State<ProcessingPage>
       spacing: 12,
       runSpacing: 12,
       children: [
-        ElevatedButton.icon(
-          onPressed: (_loading || _loadingLocaliza || _loadingConexa) ? null : () => _pickFile(true),
-          icon: const Icon(Icons.table_view_outlined),
-          label: Text(_localizaName == null ? 'Base Localiza' : 'Trocar Base Localiza'),
-        ),
-        ElevatedButton.icon(
-          onPressed: (_loading || _loadingLocaliza || _loadingConexa || _localizaRows == null) ? null : () => _pickFile(false),
-          icon: const Icon(Icons.receipt_long_outlined),
-          label: Text(_conexaName == null ? 'Planilha Conexa' : 'Trocar Planilha Conexa'),
-        ),
         FilledButton.icon(
           onPressed: (_loading || _loadingLocaliza || _loadingConexa || _localizaRows == null || _conexaRows == null) ? null : _process,
-          icon: const Icon(Icons.auto_awesome_outlined),
-          label: Text(_resultRows.isEmpty ? 'Processar' : 'Processar novamente'),
+          icon: const Icon(Icons.search),
+          label: Text(_resultRows.isEmpty ? 'Buscar' : 'Buscar novamente'),
         ),
       ],
     );
