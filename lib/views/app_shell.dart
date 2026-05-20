@@ -49,7 +49,7 @@ class AppShell extends StatelessWidget {
                       const SizedBox(height: 12),
                       SidebarButton(
                         icon: Icons.account_tree_outlined,
-                        label: 'Fluxo de cobrança',
+                        label: 'Cobrança',
                         selected: vm.current == AppSection.fluxoCobranca,
                         onTap: () => vm.setSection(AppSection.fluxoCobranca),
                       ),
