@@ -14,6 +14,10 @@ class _ProcessingPageState extends State<ProcessingPage>
   String? _conexaName;
   Map<String, LocalizaRow>? _localizaRows;
   List<ConexaRow>? _conexaRows;
+  DateTime? _startDate;
+  DateTime? _endDate;
+  static const _apiBase = 'https://alianca.conexa.app/index.php/api/v2';
+  static const _apiToken = 'a9e23e88f3283927119b49d8a8e91fd30d37cc8ea5f17b45470f23c0c10c0ae1';
   bool _loadingLocaliza = false;
   bool _loadingConexa = false;
   int _localizaCurrent = 0;
@@ -58,6 +62,10 @@ class _ProcessingPageState extends State<ProcessingPage>
       duration: const Duration(milliseconds: 950),
     );
     _loadAppVersion();
+    final now = DateTime.now();
+    _startDate = DateTime(now.year, now.month, now.day);
+    _endDate = DateTime(now.year, now.month, now.day);
+    _loadLocalizaFromTenex();
   }
 
   Future<void> _loadAppVersion() async {
@@ -68,6 +76,45 @@ class _ProcessingPageState extends State<ProcessingPage>
           ? '${packageInfo.version}+${packageInfo.buildNumber}'
           : packageInfo.version;
     });
+  }
+
+
+
+  void _loadLocalizaFromTenex() {
+    final decoded = baseTenexJson;
+    if (decoded is! List) return;
+    final map = <String, LocalizaRow>{};
+    for (final item in decoded.whereType<Map>()) {
+      final cnpj = digitsOnly((item['cnpj'] ?? '').toString());
+      if (cnpj.isEmpty) continue;
+      map[cnpj] = LocalizaRow(
+        cnpj: cnpj,
+        grupo: (item['grupo'] ?? '').toString(),
+        modalidade: (item['custom_sistema'] ?? '').toString(),
+      );
+    }
+    _localizaRows = map;
+  }
+
+  Future<dynamic> _apiGet(String url) async {
+    final xhr = await html.HttpRequest.request(
+      url,
+      method: 'GET',
+      requestHeaders: {'Authorization': 'Bearer $_apiToken'},
+      withCredentials: false,
+    );
+    if ((xhr.status ?? 0) != 200) throw Exception('API status ${xhr.status}');
+    return jsonDecode(xhr.responseText ?? '[]');
+  }
+
+  ({List<dynamic> items, int? total}) _parseApiResponse(dynamic decoded) {
+    if (decoded is List) return (items: decoded, total: null);
+    if (decoded is Map) {
+      final inner = decoded['data'] ?? decoded['items'] ?? decoded['records'] ?? decoded['result'];
+      final total = decoded['totalCount'] ?? decoded['total'] ?? decoded['count'];
+      return (items: inner is List ? inner : [], total: total is int ? total : null);
+    }
+    return (items: [], total: null);
   }
 
   @override
@@ -275,10 +322,10 @@ class _ProcessingPageState extends State<ProcessingPage>
   }
 
   Future<void> _process() async {
-    if (_localizaRows == null || _conexaRows == null) {
+    if (_localizaRows == null || _startDate == null || _endDate == null) {
       setState(() {
         _hasError = true;
-        _status = 'Envie as duas planilhas antes de processar.';
+        _status = 'Selecione data inicial e final antes de processar.';
       });
       return;
     }
@@ -303,10 +350,31 @@ class _ProcessingPageState extends State<ProcessingPage>
 
     try {
       final localizaMap = _localizaRows!;
-      final conexaRows = _conexaRows!;
       final openedTicketsByCnpj = <String, MovideskTicketInfo>{};
+      final from = _startDate!.toIso8601String().split('T').first;
+      final to = _endDate!.toIso8601String().split('T').first;
+      final decoded = await _apiGet('$_apiBase/charges?competenceDateFrom=$from&competenceDateTo=$to&limit=100');
+      final chargeItems = _parseApiResponse(decoded).items;
 
-      for (final row in conexaRows) {
+      for (final item in chargeItems.whereType<Map>()) {
+        final customerId = (item['customerId'] ?? '').toString();
+        final salesDecoded = await _apiGet('$_apiBase/sales?customerId[]=$customerId&limit=100');
+        final salesItems = _parseApiResponse(salesDecoded).items;
+        final hasAllowedProduct = salesItems.whereType<Map>().any((sale) {
+          final productName = normalizeKey(((sale['product'] as Map?)?['name'] ?? '').toString());
+          return productName.isNotEmpty && !productName.contains('servico de adesao');
+        });
+        if (!hasAllowedProduct) continue;
+
+        final row = ConexaRow(
+          idCobranca: (item['id'] ?? '').toString(),
+          cpfCnpj: (item['cpfCnpj'] ?? item['document'] ?? '').toString(),
+          razaoSocialCliente: (item['businessName'] ?? item['customerName'] ?? '').toString(),
+          valor: (item['amount'] ?? item['value'] ?? '').toString(),
+          vencimento: (item['dueDate'] ?? item['vencimento'] ?? '').toString(),
+          emails: (item['email'] ?? '').toString(),
+          telefone: (item['phone'] ?? '').toString(),
+        );
         final cnpjDigits = digitsOnly(row.cpfCnpj);
         final localiza = localizaMap[cnpjDigits];
         final modalidade = _resolveModalidade(localiza?.modalidade);
@@ -735,7 +803,7 @@ class _ProcessingPageState extends State<ProcessingPage>
         ),
         const SizedBox(height: 6),
         const Text(
-          'Envie a base Localiza, envie a planilha Conexa e processe — '
+          'Selecione o período e processe as cobranças via API — '
           'os tickets do Movidesk são consultados automaticamente.',
           style: TextStyle(
             fontFamily: 'Inter',
@@ -758,7 +826,7 @@ class _ProcessingPageState extends State<ProcessingPage>
             icon: Icons.table_view_outlined,
             title: 'Base Localiza',
             description: 'Planilha com CNPJ/CPF, Grupo e Modalidade.',
-            status: _localizaStatus,
+            status: StepStatus.pronto,
             filename: _localizaName,
             count: _localizaRows?.length,
             current: _localizaCurrent,
