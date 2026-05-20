@@ -393,10 +393,10 @@ class _ProcessingPageState extends State<ProcessingPage>
           idCobranca: chargeId,
           idCliente: customerId,
           cpfCnpj: (localizaByCustomerId?.cnpj ?? '').isNotEmpty
-              ? localizaByCustomerId.cnpj
+              ? localizaByCustomerId?.cnpj ?? ""
               : cnpjFromApi,
           razaoSocialCliente: (localizaByCustomerId?.razaoSocial ?? '').isNotEmpty
-              ? localizaByCustomerId.razaoSocial
+              ? localizaByCustomerId?.razaoSocial ?? ""
               : razaoFromApi,
           valor: (item['amount'] ?? item['value'] ?? '').toString(),
           vencimento: (item['dueDate'] ?? item['vencimento'] ?? '').toString(),
