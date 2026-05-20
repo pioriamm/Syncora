@@ -1416,7 +1416,7 @@ class _CommissionsPageState extends State<CommissionsPage> {
 
   String _normalizeServiceItem(String raw) {
     if (raw.trim().isEmpty) return '';
-    if (normalizeKey(raw).contains('mensal')) return 'Mensal';
+    if (normalizeKey(raw).contains('mensal')) return 'mensal';
     return raw;
   }
 
@@ -1434,10 +1434,20 @@ class _CommissionsPageState extends State<CommissionsPage> {
     }
     if (column == '% Comissão') return _formatPercentValue(value);
     if (moneyColumns.contains(column)) return formatReal(value);
+    if (column == 'CPF/CNPJ') return _displayValue(_formatCnpj(value));
+    if (column == 'Telefone') return _formatPhoneForGrid(value);
     if (_textColumns.contains(column)) {
       return _displayValue(_capitalizeWords(value));
     }
     return _displayValue(value);
+  }
+
+  String _formatPhoneForGrid(String value) {
+    final trimmed = value.trim();
+    final digits = digitsOnly(trimmed);
+    if (trimmed.isEmpty || normalizeKey(trimmed) == 'null') return 'N/A';
+    if (digits.isEmpty || RegExp(r'^0+$').hasMatch(digits)) return 'N/A';
+    return trimmed;
   }
 
   String _displayValue(String value) {
