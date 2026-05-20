@@ -224,6 +224,27 @@ class _ProcessingPageState extends State<ProcessingPage>
     return '$h:$m:$s';
   }
 
+  String _formatCpfCnpjForGrid(String raw) {
+    final digits = digitsOnly(raw);
+    if (digits.length == 14) return formattedCnpj(digits);
+    return raw.trim();
+  }
+
+  String _normalizeServiceItem(String raw) {
+    final trimmed = raw.trim();
+    if (trimmed.isEmpty) return '';
+    if (normalizeKey(trimmed).contains('mensal')) return 'mensal';
+    return trimmed;
+  }
+
+  String _formatPhoneForGrid(String value) {
+    final trimmed = value.trim();
+    final digits = digitsOnly(trimmed);
+    if (trimmed.isEmpty || normalizeKey(trimmed) == 'null') return 'N/A';
+    if (digits.isEmpty || RegExp(r'^0+$').hasMatch(digits)) return 'N/A';
+    return trimmed;
+  }
+
   Future<void> _pickFile(bool isLocaliza) async {
     if (isLocaliza) {
       setState(() {
@@ -517,7 +538,7 @@ class _ProcessingPageState extends State<ProcessingPage>
         final output = OutputRow(
           idCobranca: row.idCobranca,
           idCliente: row.idCliente,
-          cpfCnpj: row.cpfCnpj,
+          cpfCnpj: _formatCpfCnpjForGrid(row.cpfCnpj),
           razaoSocialCliente: row.razaoSocialCliente,
           valor: formatReal(row.valor),
           vencimento: formatDateBr(_parseFlexibleDate(row.vencimento)) ?? row.vencimento,
@@ -533,8 +554,8 @@ class _ProcessingPageState extends State<ProcessingPage>
           modalidade: modalidade,
           cobrar: cobrar,
           emails: normalizeEmails(row.emails),
-          telefone: formatFirstPhone(row.telefone),
-          servicoItem: serviceItem,
+          telefone: _formatPhoneForGrid(formatFirstPhone(row.telefone)),
+          servicoItem: _normalizeServiceItem(serviceItem),
         );
 
         if (!mounted) return;
