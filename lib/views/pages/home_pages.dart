@@ -300,12 +300,16 @@ class _PageIconButton extends StatelessWidget {
 
 class LocalizaRow {
   LocalizaRow({
+    required this.idCliente,
     required this.cnpj,
+    required this.razaoSocial,
     required this.grupo,
     required this.modalidade,
   });
 
+  final String idCliente;
   final String cnpj;
+  final String razaoSocial;
   final String grupo;
   final String modalidade;
 }
@@ -313,6 +317,7 @@ class LocalizaRow {
 class ConexaRow {
   ConexaRow({
     required this.idCobranca,
+    required this.idCliente,
     required this.cpfCnpj,
     required this.razaoSocialCliente,
     required this.valor,
@@ -322,6 +327,7 @@ class ConexaRow {
   });
 
   final String idCobranca;
+  final String idCliente;
   final String cpfCnpj;
   final String razaoSocialCliente;
   final String valor;
@@ -333,6 +339,7 @@ class ConexaRow {
 class OutputRow {
   OutputRow({
     required this.idCobranca,
+    required this.idCliente,
     required this.cpfCnpj,
     required this.razaoSocialCliente,
     required this.valor,
@@ -351,6 +358,7 @@ class OutputRow {
   });
 
   final String idCobranca;
+  final String idCliente;
   final String cpfCnpj;
   final String razaoSocialCliente;
   final String valor;
