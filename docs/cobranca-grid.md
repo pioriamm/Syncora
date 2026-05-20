@@ -154,7 +154,7 @@ A aplicação guarda em cache o ticket por CNPJ durante o processamento, evitand
 
 Um novo ticket pode ser criado quando as duas condições abaixo forem verdadeiras:
 
-1. A coluna **COBRAR** for `Realizar cobrança`; ou for `Vence hoje` e a opção de abrir ticket no vencimento estiver ativada.
+1. A coluna **COBRAR** estiver vencida pela regra (valor `Realizar cobrança`); ou for `Vence hoje` e a opção de abrir ticket no vencimento estiver ativada.
 2. Não existir ticket encontrado; ou o ticket encontrado tiver status considerado fechado.
 
 Status considerado fechado é qualquer texto que, após normalização, contenha:
