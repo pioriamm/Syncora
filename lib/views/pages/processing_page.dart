@@ -95,6 +95,8 @@ class _ProcessingPageState extends State<ProcessingPage>
         cnpj: cnpj,
         razaoSocial: (item['razao_social'] ?? '').toString(),
         grupo: (item['grupo'] ?? '').toString(),
+        vendedor: (item['vendedor'] ?? '').toString(),
+        parceiro: (item['parceiro'] ?? '').toString(),
         modalidade: (item['custom_sistema'] ?? '').toString(),
       );
       if (cnpj.isNotEmpty) map[cnpj] = row;
@@ -125,25 +127,82 @@ class _ProcessingPageState extends State<ProcessingPage>
     return (items: [], total: null);
   }
 
-  Future<Map<String, String>> _fetchCustomerDetailsById(String customerId) async {
+  Future<Map<String, String>> _fetchCustomerDetailsById(
+      String customerId,
+      ) async {
     if (customerId.trim().isEmpty) return const {};
+
     try {
-      final decoded = await _apiGet('$_apiBase/customer/$customerId');
+      final decoded = await _apiGet(
+        '$_apiBase/customer/$customerId',
+      );
+
       if (decoded is! Map) return const {};
+
       final legalPerson = decoded['legalPerson'];
-      final cnpj = legalPerson is Map ? (legalPerson['cnpj'] ?? '').toString() : '';
-      final name = (decoded['name'] ?? decoded['businessName'] ?? '').toString();
+
+      final cnpj = legalPerson is Map
+          ? (legalPerson['cnpj'] ?? '').toString()
+          : '';
+
+      final razaoSocial =
+      (decoded['name'] ?? '').toString().trim();
+
       final emailsRaw = decoded['emailsMessage'];
       final phonesRaw = decoded['phones'];
+
       String email = '';
-      if (emailsRaw is List && emailsRaw.isNotEmpty) email = emailsRaw.first.toString();
+      if (emailsRaw is List && emailsRaw.isNotEmpty) {
+        email = emailsRaw.first.toString();
+      }
+
       String phone = '';
       if (phonesRaw is List && phonesRaw.isNotEmpty) {
         final first = phonesRaw.first;
-        phone = first is Map ? (first['number'] ?? '').toString() : first.toString();
+        phone = first is Map
+            ? (first['number'] ?? '').toString()
+            : first.toString();
       }
-      return {'cnpj': cnpj, 'name': name, 'email': email, 'phone': phone};
-    } catch (_) {
+
+      String vendedor = '';
+      String parceiro = '';
+      String sistema = '';
+      String grupo = '';
+
+      final extraFields = decoded['extraFields'];
+
+      if (extraFields is List) {
+        for (final field in extraFields.whereType<Map>()) {
+          final fieldId = field['id'];
+          final fieldValue =
+          (field['value'] ?? '').toString();
+
+          if (fieldId == 1) {
+            vendedor = fieldValue;
+          } else if (fieldId == 2) {
+            parceiro = fieldValue;
+          } else if (fieldId == 3) {
+            sistema = fieldValue;
+          } else if (fieldId == 7) {
+            grupo = fieldValue;
+          }
+        }
+      }
+
+      return {
+        'cnpj': cnpj,
+        'name': razaoSocial,
+        'email': email,
+        'phone': phone,
+        'vendedor': vendedor,
+        'parceiro': parceiro,
+        'sistema': sistema,
+        'grupo': grupo,
+      };
+    } catch (e) {
+      debugPrint(
+        'Erro ao buscar customer $customerId: $e',
+      );
       return const {};
     }
   }
@@ -438,7 +497,15 @@ class _ProcessingPageState extends State<ProcessingPage>
         final cnpjFromApi = (item['cpfCnpj'] ?? item['document'] ?? '').toString();
         final razaoFromApi =
             (item['businessName'] ?? item['customerName'] ?? '').toString();
+        
         final customerDetails = await _fetchCustomerDetailsById(customerId);
+        
+        // Prioriza Razão Social da API Conexa conforme solicitado
+        final razaoSocialFinal =
+        (customerDetails['name'] ?? '').trim().isNotEmpty
+            ? customerDetails['name']!.trim()
+            : razaoFromApi;
+
         final row = ConexaRow(
           idCobranca: chargeId,
           idCliente: customerId,
@@ -447,11 +514,7 @@ class _ProcessingPageState extends State<ProcessingPage>
               : (customerDetails['cnpj'] ?? '').trim().isNotEmpty
                   ? customerDetails['cnpj']!
                   : cnpjFromApi,
-          razaoSocialCliente: (localizaByCustomerId?.razaoSocial ?? '').isNotEmpty
-              ? localizaByCustomerId?.razaoSocial ?? ""
-              : (customerDetails['name'] ?? '').trim().isNotEmpty
-                  ? customerDetails['name']!
-                  : razaoFromApi,
+          razaoSocialCliente: razaoSocialFinal,
           valor: (item['amount'] ?? item['value'] ?? '').toString(),
           vencimento: (item['dueDate'] ?? item['vencimento'] ?? '').toString(),
           emails: (item['email'] ?? '').toString().trim().isNotEmpty
@@ -466,20 +529,50 @@ class _ProcessingPageState extends State<ProcessingPage>
         final localiza = localizaByCustomerId != null
             ? localizaByCustomerId
             : localizaMap[cnpjDigits];
-        final groupName = (localiza?.grupo ?? '').trim();
+
+        // Prioriza as informações vindas da API conforme solicitado
+        final groupName = (customerDetails['grupo'] ?? '').trim().isNotEmpty 
+            ? customerDetails['grupo']! 
+            : (localiza?.grupo ?? '').trim();
+        final vendedor =
+        (customerDetails['vendedor'] ?? '').trim().isNotEmpty
+            ? customerDetails['vendedor']!.trim()
+            : 'N/A';
+        final parceiro = (customerDetails['parceiro'] ?? '').trim().isNotEmpty 
+            ? customerDetails['parceiro']! 
+            : (localiza?.parceiro ?? '').trim();
+        final modalidadeFromApi = (customerDetails['sistema'] ?? '').trim().isNotEmpty 
+            ? customerDetails['sistema']! 
+            : (localiza?.modalidade ?? '').trim();
+
         final groupKey = normalizeKey(groupName);
         final summary =
             '- ID: ${row.idCobranca} | Cliente: ${row.idCliente} | CNPJ: ${row.cpfCnpj} | Razão: ${row.razaoSocialCliente} | Valor: ${formatReal(row.valor)} | Vencimento: ${formatDateBr(_parseFlexibleDate(row.vencimento)) ?? row.vencimento}';
         groupRowsSummary.putIfAbsent(groupKey, () => <String>[]).add(summary);
-        final modalidade = _resolveModalidade(localiza?.modalidade);
+        
+        final modalidade = _resolveModalidade(modalidadeFromApi);
         final isWhiteLabel = _isWhiteLabel(modalidade);
-        final regraCobranca = isWhiteLabel ? '3' : '7';
+
+        // Nova regra: se servicoItem for adesão -> 31
+        final isAdesao = normalizeKey(serviceItem).contains('adesao');
+        final regraCobranca = isAdesao ? '31' : (isWhiteLabel ? '3' : '7');
+
         final regraDias = int.parse(regraCobranca);
         final dataCobranca = _buildChargeDate(row.vencimento, regraDias);
         final dataCobrancaDate = dataCobranca?.date;
         final cobrar = _buildChargeLabel(dataCobrancaDate);
 
         final dataVencimento = _parseFlexibleDate(row.vencimento);
+
+        // Calcula dias em atraso
+        String diasAtrasoStr = '—';
+        if (dataVencimento != null) {
+          final today = DateTime.now();
+          final todayOnly = DateTime(today.year, today.month, today.day);
+          final vencimentoOnly = DateTime(dataVencimento.year, dataVencimento.month, dataVencimento.day);
+          final diff = todayOnly.difference(vencimentoOnly).inDays;
+          diasAtrasoStr = diff >= 0 ? diff.toString() : '0';
+        }
 
         MovideskTicketInfo? ticketInfo = openedTicketsByGroup[groupKey];
         if (ticketInfo == null) {
@@ -505,7 +598,7 @@ class _ProcessingPageState extends State<ProcessingPage>
         if (shouldOpenTicketForCharge && shouldCreateNewTicket) {
           try {
             final person = await _movideskApiService.fetchPersonByBusinessName(
-                  localiza?.grupo ?? '',
+                  groupName,
                   _movideskToken,
                 ) ??
                 _fallbackMovideskPerson;
@@ -550,12 +643,15 @@ class _ProcessingPageState extends State<ProcessingPage>
           ticketMovideskUrl: ticketInfo?.id == null
               ? ''
               : 'https://suporte.conciliadora.com.br/Ticket/Edit/${ticketInfo!.id}',
-          grupo: localiza?.grupo ?? '',
-          modalidade: modalidade,
+          grupo: groupName,
+          vendedor: vendedor.trim().isEmpty ? 'N/A' : vendedor,
+          parceiro: parceiro,
+          modalidade: parceiro == "White Label" ? parceiro : modalidade,
           cobrar: cobrar,
           emails: normalizeEmails(row.emails),
           telefone: _formatPhoneForGrid(formatFirstPhone(row.telefone)),
           servicoItem: _normalizeServiceItem(serviceItem),
+          diasAtraso: diasAtrasoStr,
         );
 
         if (!mounted) return;
@@ -678,8 +774,11 @@ class _ProcessingPageState extends State<ProcessingPage>
       'Vencimento',
       'Pagamento regra',
       'Data cobrança',
+      'Dias em atraso',
       'Cobrar',
       'Grupo',
+      'Vendedor',
+      'Parceiro',
       'Modalidade',
       'Emails',
       'Telefone',
@@ -699,8 +798,11 @@ class _ProcessingPageState extends State<ProcessingPage>
         row.vencimento,
         row.prazoCobranca,
         row.dataCobranca,
+        row.diasAtraso,
         row.cobrar,
         row.grupo,
+        row.vendedor,
+        row.parceiro,
         row.modalidade,
         row.emails,
         row.telefone,
@@ -1558,9 +1660,9 @@ class _ProcessingPageState extends State<ProcessingPage>
             color: Color(0x0A0F172A),
             blurRadius: 10,
             offset: Offset(0, 2),
-          ),
-        ],
-      ),
+            ),
+          ],
+        ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -1769,10 +1871,13 @@ class _ProcessingPageState extends State<ProcessingPage>
                   DataColumn(label: Text('RAZÃO SOCIAL')),
                   DataColumn(label: Text('VALOR'), numeric: true),
                   DataColumn(label: Text('VENCIMENTO')),
+                  DataColumn(label: Text('DIAS ATRASO'), numeric: true),
                   DataColumn(label: Text('REGRA')),
                   DataColumn(label: Text('DATA COBRANÇA')),
                   DataColumn(label: Text('COBRAR')),
                   DataColumn(label: Text('GRUPO')),
+                  DataColumn(label: Text('VENDEDOR')),
+                  DataColumn(label: Text('PARCEIRO')),
                   DataColumn(label: Text('MODALIDADE')),
                   DataColumn(label: Text('EMAILS')),
                   DataColumn(label: Text('TELEFONE')),
@@ -1869,6 +1974,20 @@ class _ProcessingPageState extends State<ProcessingPage>
                       ),
                     ),
                     _buildCopyableDataCell(
+                      valueToCopy: row.diasAtraso,
+                      child: Text(
+                        row.diasAtraso,
+                        style: TextStyle(
+                          fontFamily: 'JetBrains Mono',
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                          color: (int.tryParse(row.diasAtraso) ?? 0) > 0 
+                              ? AppColors.danger 
+                              : AppColors.textSecondary,
+                        ),
+                      ),
+                    ),
+                    _buildCopyableDataCell(
                       valueToCopy: row.prazoCobranca,
                       child: _RegraBadge(value: row.prazoCobranca),
                     ),
@@ -1909,6 +2028,28 @@ class _ProcessingPageState extends State<ProcessingPage>
                     _buildCopyableDataCell(
                       valueToCopy: row.grupo,
                       child: _GrupoChip(value: row.grupo),
+                    ),
+                    _buildCopyableDataCell(
+                      valueToCopy: row.vendedor,
+                      child: Text(
+                        row.vendedor,
+                        style: const TextStyle(
+                          fontFamily: 'Inter',
+                          fontSize: 13,
+                          color: AppColors.textPrimary,
+                        ),
+                      ),
+                    ),
+                    _buildCopyableDataCell(
+                      valueToCopy: row.parceiro,
+                      child: Text(
+                        row.parceiro,
+                        style: const TextStyle(
+                          fontFamily: 'Inter',
+                          fontSize: 13,
+                          color: AppColors.textPrimary,
+                        ),
+                      ),
                     ),
                     _buildCopyableDataCell(
                       valueToCopy: row.modalidade,

@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:provider/provider.dart';
 
-import '../../core/app_colors.dart';
 import '../../viewmodels/navigation_view_model.dart';
 import '../app_shell.dart';
 
@@ -22,7 +21,7 @@ class LoginPage extends StatefulWidget {
 
 class _LoginPageState extends State<LoginPage> {
   static const _validUser = 'financeiro';
-  static const _validPass = 'Alianca@2026';
+  static const _validPass = 'alianca@2026';
 
   final _userController = TextEditingController();
   final _passController = TextEditingController();
@@ -41,7 +40,9 @@ class _LoginPageState extends State<LoginPage> {
 
   Future<void> _loadAppVersion() async {
     final packageInfo = await PackageInfo.fromPlatform();
+
     if (!mounted) return;
+
     setState(() {
       _appVersion = packageInfo.buildNumber.isNotEmpty
           ? '${packageInfo.version}+${packageInfo.buildNumber}'
@@ -58,10 +59,13 @@ class _LoginPageState extends State<LoginPage> {
 
   Future<void> _submit() async {
     setState(() => _errorMessage = null);
+
     if (!(_formKey.currentState?.validate() ?? false)) return;
 
     setState(() => _loading = true);
+
     await Future<void>.delayed(const Duration(milliseconds: 400));
+
     if (!mounted) return;
 
     if (_userController.text.trim() == _validUser &&
@@ -91,102 +95,78 @@ class _LoginPageState extends State<LoginPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.bg,
-      body: Center(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24),
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 420),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                _buildLogo(),
-                const SizedBox(height: 36),
-                _buildCard(),
-              ],
+      backgroundColor: const Color(0xFF062F38),
+      body: Stack(
+        children: [
+          Center(
+            child: Container(
+              width: 500,
+              height: 500,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: const Color(0xFFD6E600).withOpacity(0.10),
+                boxShadow: [
+                  BoxShadow(
+                    color: const Color(0xFFD6E600).withOpacity(0.18),
+                    blurRadius: 180,
+                    spreadRadius: 40,
+                  ),
+                ],
+              ),
             ),
           ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildLogo() {
-    return Column(
-      children: [
-        Container(
-          width: 72,
-          height: 72,
-          decoration: BoxDecoration(
-            color: AppColors.primary,
-            borderRadius: BorderRadius.circular(20),
-            boxShadow: [
-              BoxShadow(
-                color: AppColors.primary.withAlpha(60),
-                blurRadius: 24,
-                offset: const Offset(0, 8),
+          Center(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(24),
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 420),
+                child: _buildCard(),
               ),
-            ],
+            ),
           ),
-          child: const Icon(
-            Icons.account_balance_wallet_outlined,
-            color: Colors.white,
-            size: 36,
-          ),
-        ),
-        const SizedBox(height: 20),
-        const Text(
-          'Aliança Financeiro',
-          style: TextStyle(
-            fontFamily: 'Inter',
-            fontSize: 26,
-            fontWeight: FontWeight.w700,
-            color: AppColors.textPrimary,
-            letterSpacing: -0.5,
-          ),
-        ),
-        const SizedBox(height: 6),
-        const Text(
-          'Faça login para acessar o sistema',
-          style: TextStyle(
-            fontFamily: 'Inter',
-            fontSize: 14,
-            color: AppColors.textSecondary,
-          ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 
   Widget _buildCard() {
     return Container(
+      padding: const EdgeInsets.all(36),
       decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.border),
-        boxShadow: const [
+        color: const Color(0xFF08272F).withOpacity(0.96),
+        borderRadius: BorderRadius.circular(28),
+        border: Border.all(
+          color: Colors.white.withOpacity(0.05),
+        ),
+        boxShadow: [
           BoxShadow(
-            color: Color(0x0C0F172A),
-            blurRadius: 16,
-            offset: Offset(0, 4),
+            color: Colors.black.withOpacity(0.35),
+            blurRadius: 50,
+            offset: const Offset(0, 20),
           ),
         ],
       ),
-      padding: const EdgeInsets.all(32),
       child: Form(
         key: _formKey,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
+            _buildLogo(),
+            const SizedBox(height: 32),
+
             _buildField(
               label: 'Usuário',
               controller: _userController,
               icon: Icons.person_outline,
               hint: 'Digite seu usuário',
               validator: (v) =>
-                  (v?.trim().isEmpty ?? true) ? 'Informe o usuário' : null,
+              (v?.trim().isEmpty ?? true)
+                  ? 'Informe o usuário'
+                  : null,
             ),
-            const SizedBox(height: 18),
+
+            const SizedBox(height: 20),
+
             _buildField(
               label: 'Senha',
               controller: _passController,
@@ -198,86 +178,155 @@ class _LoginPageState extends State<LoginPage> {
                   _obscurePass
                       ? Icons.visibility_outlined
                       : Icons.visibility_off_outlined,
-                  size: 20,
-                  color: AppColors.textSecondary,
+                  color: Colors.white70,
                 ),
-                onPressed: () =>
-                    setState(() => _obscurePass = !_obscurePass),
+                onPressed: () {
+                  setState(() {
+                    _obscurePass = !_obscurePass;
+                  });
+                },
               ),
               validator: (v) =>
-                  (v?.isEmpty ?? true) ? 'Informe a senha' : null,
+              (v?.isEmpty ?? true)
+                  ? 'Informe a senha'
+                  : null,
               onFieldSubmitted: (_) => _submit(),
             ),
+
             if (_errorMessage != null) ...[
-              const SizedBox(height: 16),
+              const SizedBox(height: 18),
+
               Container(
-                padding: const EdgeInsets.symmetric(
-                    horizontal: 14, vertical: 12),
+                padding: const EdgeInsets.all(14),
                 decoration: BoxDecoration(
-                  color: AppColors.dangerSoft,
-                  borderRadius: BorderRadius.circular(10),
+                  color: Colors.red.withOpacity(0.12),
+                  borderRadius: BorderRadius.circular(14),
                   border: Border.all(
-                      color: AppColors.danger.withAlpha(60)),
+                    color: Colors.red.withOpacity(0.4),
+                  ),
                 ),
-                child: Row(
-                  children: [
-                    const Icon(Icons.error_outline,
-                        size: 18, color: AppColors.danger),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: Text(
-                        _errorMessage!,
-                        style: const TextStyle(
-                          fontFamily: 'Inter',
-                          fontSize: 13,
-                          color: AppColors.danger,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    ),
-                  ],
+                child: Text(
+                  _errorMessage!,
+                  style: const TextStyle(
+                    color: Colors.redAccent,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
               ),
             ],
-            const SizedBox(height: 24),
+
+            const SizedBox(height: 28),
+
             SizedBox(
-              height: 50,
-              child: FilledButton(
+              height: 58,
+              child: ElevatedButton(
                 onPressed: _loading ? null : _submit,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFFD6E600),
+                  foregroundColor: const Color(0xFF062F38),
+                  elevation: 0,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(18),
+                  ),
+                ),
                 child: _loading
                     ? const SizedBox(
-                        width: 20,
-                        height: 20,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: Colors.white,
-                        ),
-                      )
+                  width: 22,
+                  height: 22,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: Color(0xFF062F38),
+                  ),
+                )
                     : const Text(
-                        'Entrar',
-                        style: TextStyle(
-                          fontFamily: 'Inter',
-                          fontSize: 15,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-              ),
-            ),
-            if (_appVersion.isNotEmpty) ...[
-              const SizedBox(height: 12),
-              Text(
-                'Versão $_appVersion',
-                textAlign: TextAlign.center,
-                style: const TextStyle(
-                  fontFamily: 'Inter',
-                  fontSize: 12,
-                  color: AppColors.textSecondary,
+                  'Entrar',
+                  style: TextStyle(
+                    fontSize: 17,
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
               ),
-            ],
+            ),
+
+            const SizedBox(height: 24),
+
+            Column(
+              children: [
+                const Text(
+                  '© 2026 FinancePro',
+                  style: TextStyle(
+                    color: Colors.white54,
+                    fontSize: 13,
+                  ),
+                ),
+
+                if (_appVersion.isNotEmpty)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 4),
+                    child: Text(
+                      'Versão $_appVersion',
+                      style: const TextStyle(
+                        color: Colors.white38,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ),
+              ],
+            ),
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildLogo() {
+    return Column(
+      children: [
+        Container(
+          width: 110,
+          height: 110,
+          decoration: BoxDecoration(
+            color: const Color(0xFF0B3A45),
+            borderRadius: BorderRadius.circular(30),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.35),
+                blurRadius: 30,
+                offset: const Offset(0, 12),
+              ),
+            ],
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(1),
+            child: Image.asset(
+              'assets/images/logo_1.png',
+            ),
+          ),
+        ),
+
+        const SizedBox(height: 24),
+
+        const Text(
+          'FinancePro',
+          style: TextStyle(
+            fontSize: 30,
+            fontWeight: FontWeight.w700,
+            color: Colors.white,
+            letterSpacing: -0.5,
+          ),
+        ),
+
+        const SizedBox(height: 8),
+
+        const Text(
+          'Controle financeiro, pagamentos e comissões',
+          textAlign: TextAlign.center,
+          style: TextStyle(
+            fontSize: 14,
+            color: Colors.white60,
+          ),
+        ),
+      ],
     );
   }
 
@@ -297,58 +346,68 @@ class _LoginPageState extends State<LoginPage> {
         Text(
           label,
           style: const TextStyle(
-            fontFamily: 'Inter',
             fontSize: 13,
             fontWeight: FontWeight.w600,
-            color: AppColors.textSecondary,
+            color: Colors.white70,
           ),
         ),
+
         const SizedBox(height: 8),
+
         TextFormField(
           controller: controller,
           obscureText: obscure,
           validator: validator,
           onFieldSubmitted: onFieldSubmitted,
           style: const TextStyle(
-            fontFamily: 'Inter',
             fontSize: 14,
-            color: AppColors.textPrimary,
+            color: Colors.white,
           ),
           decoration: InputDecoration(
             hintText: hint,
             hintStyle: const TextStyle(
-              fontFamily: 'Inter',
               fontSize: 14,
-              color: AppColors.textMuted,
+              color: Colors.white38,
             ),
-            prefixIcon:
-                Icon(icon, size: 20, color: AppColors.textSecondary),
+            prefixIcon: Icon(
+              icon,
+              size: 20,
+              color: Colors.white70,
+            ),
             suffixIcon: suffixIcon,
             filled: true,
-            fillColor: AppColors.surfaceAlt,
+            fillColor: const Color(0xFF0D404B),
             contentPadding: const EdgeInsets.symmetric(
-                horizontal: 16, vertical: 14),
+              horizontal: 16,
+              vertical: 14,
+            ),
             border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(10),
-              borderSide: const BorderSide(color: AppColors.border),
+              borderRadius: BorderRadius.circular(16),
+              borderSide: BorderSide.none,
             ),
             enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(10),
-              borderSide: const BorderSide(color: AppColors.border),
+              borderRadius: BorderRadius.circular(16),
+              borderSide: BorderSide.none,
             ),
             focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(10),
-              borderSide:
-                  const BorderSide(color: AppColors.primary, width: 2),
+              borderRadius: BorderRadius.circular(16),
+              borderSide: const BorderSide(
+                color: Color(0xFFD6E600),
+                width: 2,
+              ),
             ),
             errorBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(10),
-              borderSide: const BorderSide(color: AppColors.danger),
+              borderRadius: BorderRadius.circular(16),
+              borderSide: const BorderSide(
+                color: Colors.redAccent,
+              ),
             ),
             focusedErrorBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(10),
-              borderSide:
-                  const BorderSide(color: AppColors.danger, width: 2),
+              borderRadius: BorderRadius.circular(16),
+              borderSide: const BorderSide(
+                color: Colors.redAccent,
+                width: 2,
+              ),
             ),
           ),
         ),

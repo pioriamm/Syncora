@@ -98,9 +98,10 @@ class _RegraBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final is3 = value.trim() == '3';
-    final fg = is3 ? AppColors.primary : AppColors.textSecondary;
-    final bg = is3 ? AppColors.primarySoft : AppColors.neutralSoft;
+    final v = value.trim();
+    final isSpecial = v == '3' || v == '31';
+    final fg = isSpecial ? AppColors.primary : AppColors.textSecondary;
+    final bg = isSpecial ? AppColors.primarySoft : AppColors.neutralSoft;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration: BoxDecoration(
@@ -304,6 +305,8 @@ class LocalizaRow {
     required this.cnpj,
     required this.razaoSocial,
     required this.grupo,
+    required this.vendedor,
+    required this.parceiro,
     required this.modalidade,
   });
 
@@ -311,6 +314,8 @@ class LocalizaRow {
   final String cnpj;
   final String razaoSocial;
   final String grupo;
+  final String vendedor;
+  final String parceiro;
   final String modalidade;
 }
 
@@ -351,11 +356,14 @@ class OutputRow {
     required this.ticketStatus,
     required this.ticketMovideskUrl,
     required this.grupo,
+    required this.vendedor,
+    required this.parceiro,
     required this.modalidade,
     required this.cobrar,
     required this.emails,
     required this.telefone,
     required this.servicoItem,
+    required this.diasAtraso,
   });
 
   final String idCobranca;
@@ -371,11 +379,14 @@ class OutputRow {
   final String ticketStatus;
   final String ticketMovideskUrl;
   final String grupo;
+  final String vendedor;
+  final String parceiro;
   final String modalidade;
   final String cobrar;
   final String emails;
   final String telefone;
   final String servicoItem;
+  final String diasAtraso;
 }
 
 class AdminCobrancaRow {

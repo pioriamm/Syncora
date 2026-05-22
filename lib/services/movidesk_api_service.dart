@@ -139,7 +139,7 @@ class MovideskApiService {
     });
 
     final payload = <String, dynamic>{
-      'subject': '#Cobrança - $razaoSocial',
+      'subject': 'Marcelo - #Cobrança - $razaoSocial',
       'type': 2,
       'origin': 2,
       'status': 'Iniciar Atendimento',

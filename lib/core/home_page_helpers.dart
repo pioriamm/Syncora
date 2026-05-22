@@ -1,9 +1,5 @@
 part of '../views/pages/home_pages.dart';
 
-
-
-
-
 class ChargeDateResult {
   const ChargeDateResult({
     required this.date,
@@ -186,6 +182,8 @@ Future<Map<String, LocalizaRow>> parseLocalizaBytes(
   final header = _headerMap(table.rows.first);
   final cnpjCol = _findColumn(header, ['CNPJ', 'CNPJ/CPF', 'cpfcnpj']);
   final grupoCol = _findColumn(header, ['Grupo']);
+  final vendedorCol = _findColumn(header, ['Vendedor']);
+  final parceiroCol = _findColumn(header, ['Parceiro']);
   final modalidadeCol = _findColumn(header, ['Modalidade']);
 
   if (cnpjCol == null || grupoCol == null || modalidadeCol == null) {
@@ -215,6 +213,8 @@ Future<Map<String, LocalizaRow>> parseLocalizaBytes(
           cnpj: cnpj,
           razaoSocial: '',
           grupo: _cellValue(row, grupoCol),
+          vendedor: vendedorCol != null ? _cellValue(row, vendedorCol) : '',
+          parceiro: parceiroCol != null ? _cellValue(row, parceiroCol) : '',
           modalidade: _cellValue(row, modalidadeCol),
         ),
       );
@@ -453,6 +453,8 @@ Future<Map<String, LocalizaRow>> parseLocalizaCsvBytes(
   final header = _csvHeaderMap(_parseCsvLine(lines.first, sep));
   final cnpjCol = _csvFindColumn(header, ['CNPJ', 'CNPJ/CPF', 'cpfcnpj']);
   final grupoCol = _csvFindColumn(header, ['Grupo']);
+  final vendedorCol = _csvFindColumn(header, ['Vendedor']);
+  final parceiroCol = _csvFindColumn(header, ['Parceiro']);
   final modalidadeCol = _csvFindColumn(header, ['Modalidade']);
 
   if (cnpjCol == null || grupoCol == null || modalidadeCol == null) {
@@ -483,6 +485,8 @@ Future<Map<String, LocalizaRow>> parseLocalizaCsvBytes(
           cnpj: cnpj,
           razaoSocial: '',
           grupo: _csvField(row, grupoCol),
+          vendedor: vendedorCol != null ? _csvField(row, vendedorCol) : '',
+          parceiro: parceiroCol != null ? _csvField(row, parceiroCol) : '',
           modalidade: _csvField(row, modalidadeCol),
         ),
       );
