@@ -794,7 +794,6 @@ class _CommissionsPageState extends State<CommissionsPage> {
                             Expanded(
                               child: TextField(
                                 controller: _searchController,
-                                cursorColor: AppColors.successStrong,
                                 onChanged: (value) => setState(() {
                                   _searchQuery = value;
                                   _currentPage = 0;
