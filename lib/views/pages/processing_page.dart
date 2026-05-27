@@ -107,14 +107,25 @@ class _ProcessingPageState extends State<ProcessingPage>
   }
 
   Future<dynamic> _apiGet(String url) async {
-    final xhr = await html.HttpRequest.request(
-      url,
-      method: 'GET',
-      requestHeaders: {'Authorization': 'Bearer $_apiToken'},
-      withCredentials: false,
-    );
-    if ((xhr.status ?? 0) != 200) throw Exception('API status ${xhr.status}');
-    return jsonDecode(xhr.responseText ?? '[]');
+    try {
+      final xhr = await html.HttpRequest.request(
+        url,
+        method: 'GET',
+        requestHeaders: {'Authorization': 'Bearer $_apiToken'},
+        withCredentials: false,
+      );
+      if ((xhr.status ?? 0) != 200) {
+        final body = (xhr.responseText ?? '').trim();
+        throw ProcessingException(
+          'Erro na API (${xhr.status}) ao acessar $url${body.isEmpty ? '' : ': $body'}',
+        );
+      }
+      return jsonDecode(xhr.responseText ?? '[]');
+    } on ProcessingException {
+      rethrow;
+    } catch (e) {
+      throw ProcessingException('Erro ao chamar API: $url. Detalhe: $e');
+    }
   }
 
   ({List<dynamic> items, int? total}) _parseApiResponse(dynamic decoded) {
@@ -132,12 +143,11 @@ class _ProcessingPageState extends State<ProcessingPage>
       ) async {
     if (customerId.trim().isEmpty) return const {};
 
-    try {
-      final decoded = await _apiGet(
-        '$_apiBase/customer/$customerId',
-      );
+    final decoded = await _apiGet(
+      '$_apiBase/customer/$customerId',
+    );
 
-      if (decoded is! Map) return const {};
+    if (decoded is! Map) return const {};
 
       final legalPerson = decoded['legalPerson'];
 
@@ -189,22 +199,16 @@ class _ProcessingPageState extends State<ProcessingPage>
         }
       }
 
-      return {
-        'cnpj': cnpj,
-        'name': razaoSocial,
-        'email': email,
-        'phone': phone,
-        'vendedor': vendedor,
-        'parceiro': parceiro,
-        'sistema': sistema,
-        'grupo': grupo,
-      };
-    } catch (e) {
-      debugPrint(
-        'Erro ao buscar customer $customerId: $e',
-      );
-      return const {};
-    }
+    return {
+      'cnpj': cnpj,
+      'name': razaoSocial,
+      'email': email,
+      'phone': phone,
+      'vendedor': vendedor,
+      'parceiro': parceiro,
+      'sistema': sistema,
+      'grupo': grupo,
+    };
   }
 
   @override
@@ -480,17 +484,18 @@ class _ProcessingPageState extends State<ProcessingPage>
 
       for (final item in chargeItems.whereType<Map>()) {
         final customerId = (item['customerId'] ?? '').toString();
-        final salesDecoded = await _apiGet('$_apiBase/sales?customerId[]=$customerId&limit=100');
-        final salesItems = _parseApiResponse(salesDecoded).items;
-        final serviceItem = salesItems
-            .whereType<Map>()
-            .map((sale) => ((sale['product'] as Map?)?['name'] ?? '').toString().trim())
-            .firstWhere((name) => name.isNotEmpty, orElse: () => '');
-        final hasAllowedProduct = salesItems.whereType<Map>().any((sale) {
-          final productName = normalizeKey(((sale['product'] as Map?)?['name'] ?? '').toString());
-          return productName.isNotEmpty && !productName.contains('servico de adesao');
-        });
-        if (!hasAllowedProduct) continue;
+        final chargeSalesIds = item['salesIds'];
+        final firstSaleId = chargeSalesIds is List && chargeSalesIds.isNotEmpty
+            ? chargeSalesIds.first.toString().trim()
+            : '';
+        final saleDecoded =
+            firstSaleId.isEmpty ? const {} : await _apiGet('$_apiBase/sale/$firstSaleId');
+        final serviceItem = saleDecoded is Map
+            ? (((saleDecoded['product'] as Map?)?['name'] ?? '').toString().trim())
+            : '';
+        final isOnlyAdesao = normalizeKey(serviceItem).isNotEmpty &&
+            normalizeKey(serviceItem).contains('servico de adesao');
+        if (isOnlyAdesao) continue;
 
         final chargeId = (item['chargeId'] ?? item['id'] ?? '').toString();
         final localizaByCustomerId = localizaMapById[customerId];
