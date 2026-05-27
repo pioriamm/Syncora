@@ -599,7 +599,7 @@ class _ProcessingPageState extends State<ProcessingPage>
         final isDueToday = _isToday(dataCobrancaDate);
         final isOverdueByRule = _shouldPerformCharge(dataCobrancaDate);
         final shouldOpenTicketForCharge =
-            isOverdueByRule || (isDueToday && _autoOpenTicketOnDueToday);
+            _autoOpenTicketOnDueToday && (isOverdueByRule || isDueToday);
         if (shouldOpenTicketForCharge && shouldCreateNewTicket) {
           try {
             final person = await _movideskApiService.fetchPersonByBusinessName(
@@ -1072,7 +1072,7 @@ class _ProcessingPageState extends State<ProcessingPage>
                       const SizedBox(width: 4),
                       const Expanded(
                         child: Text(
-                          'Abrir ticket automático no Movidesk',
+                          'Abrir ticket automático (Movidesk)',
                           style: TextStyle(
                             fontFamily: 'Inter',
                             fontSize: 13,
