@@ -482,23 +482,29 @@ class _ProcessingPageState extends State<ProcessingPage>
       for (final item in chargeItems.whereType<Map>()) {
         final customerId = (item['customerId'] ?? '').toString();
         final salesIds = item['salesIds'];
-        final saleId = salesIds is List && salesIds.isNotEmpty
-            ? salesIds.first?.toString() ?? ''
-            : '';
-        var serviceItem = '';
-        if (saleId.isNotEmpty) {
-          serviceItem = saleNameCache[saleId] ?? '';
-          if (serviceItem.isEmpty) {
+        final saleIds = salesIds is List
+            ? salesIds.map((e) => e?.toString() ?? '').where((e) => e.isNotEmpty)
+            : const Iterable<String>.empty();
+        final serviceItems = <String>{};
+        for (final saleId in saleIds) {
+          var saleProductName = saleNameCache[saleId] ?? '';
+          if (saleProductName.isEmpty) {
             final saleDecoded = await _apiGet('$_apiBase/sale/$saleId');
             if (saleDecoded is Map) {
-              serviceItem =
-                  ((saleDecoded['product'] as Map?)?['name'] ?? '').toString().trim();
-              if (serviceItem.isNotEmpty) {
-                saleNameCache[saleId] = serviceItem;
+              saleProductName =
+                  ((saleDecoded['product'] as Map?)?['name'] ?? '')
+                      .toString()
+                      .trim();
+              if (saleProductName.isNotEmpty) {
+                saleNameCache[saleId] = saleProductName;
               }
             }
           }
+          if (saleProductName.isNotEmpty) {
+            serviceItems.add(saleProductName);
+          }
         }
+        final serviceItem = serviceItems.join(' | ');
         final hasAllowedProduct = serviceItem.isNotEmpty &&
             !normalizeKey(serviceItem).contains('servico de adesao');
         if (!hasAllowedProduct) continue;
@@ -1116,6 +1122,14 @@ class _ProcessingPageState extends State<ProcessingPage>
               children: [
                 Switch(
                   value: _autoOpenTicketOnDueToday,
+                  activeColor: AppColors.successStrong,
+                  activeTrackColor: AppColors.successStrong.withValues(alpha: 0.35),
+                  thumbColor: WidgetStateProperty.resolveWith<Color?>((states) {
+                    if (states.contains(WidgetState.selected)) {
+                      return AppColors.successStrong;
+                    }
+                    return null;
+                  }),
                   onChanged: (value) {
                     setState(() {
                       _autoOpenTicketOnDueToday = value;
