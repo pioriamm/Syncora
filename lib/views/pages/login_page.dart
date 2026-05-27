@@ -253,7 +253,7 @@ class _LoginPageState extends State<LoginPage> {
             Column(
               children: [
                 const Text(
-                  '© 2026 FinancePro',
+                  'Syncora ©2026',
                   style: TextStyle(
                     color: Colors.white54,
                     fontSize: 13,
@@ -307,7 +307,7 @@ class _LoginPageState extends State<LoginPage> {
         const SizedBox(height: 24),
 
         const Text(
-          'FinancePro',
+          'Syncora',
           style: TextStyle(
             fontSize: 30,
             fontWeight: FontWeight.w700,

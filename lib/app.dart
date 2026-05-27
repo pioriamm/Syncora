@@ -29,7 +29,7 @@ class ConexaApp extends StatelessWidget {
     );
 
     return MaterialApp(
-        title: 'Conexa — Consolidador de Cobrança',
+        title: 'Syncora',
         debugShowCheckedModeBanner: false,
         localizationsDelegates: const [
           GlobalMaterialLocalizations.delegate,
