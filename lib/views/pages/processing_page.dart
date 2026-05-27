@@ -1039,18 +1039,64 @@ class _ProcessingPageState extends State<ProcessingPage>
       runSpacing: 12,
       children: [
         SizedBox(
-          width: 220,
-          height: 70,
-          child: FilledButton.icon(
-            onPressed: (_loading || _loadingLocaliza)
-                ? null
-                : _process,
-            icon: const Icon(Icons.search),
-            label: Text(
-              _resultRows.isEmpty
-                  ? 'Buscar'
-                  : 'Buscar novamente',
-            ),
+          width: 320,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              InkWell(
+                onTap: () {
+                  setState(() {
+                    _autoOpenTicketOnDueToday = !_autoOpenTicketOnDueToday;
+                  });
+                },
+                borderRadius: BorderRadius.circular(8),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 8),
+                  child: Row(
+                    children: [
+                      Radio<bool>(
+                        value: true,
+                        groupValue: _autoOpenTicketOnDueToday ? true : null,
+                        onChanged: (_) {
+                          setState(() {
+                            _autoOpenTicketOnDueToday =
+                                !_autoOpenTicketOnDueToday;
+                          });
+                        },
+                      ),
+                      const SizedBox(width: 4),
+                      const Expanded(
+                        child: Text(
+                          'Abrir ticket automático no Movidesk',
+                          style: TextStyle(
+                            fontFamily: 'Inter',
+                            fontSize: 13,
+                            color: AppColors.textSecondary,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 8),
+              SizedBox(
+                width: 220,
+                height: 70,
+                child: FilledButton.icon(
+                  onPressed: (_loading || _loadingLocaliza)
+                      ? null
+                      : _process,
+                  icon: const Icon(Icons.search),
+                  label: Text(
+                    _resultRows.isEmpty
+                        ? 'Buscar'
+                        : 'Buscar novamente',
+                  ),
+                ),
+              ),
+            ],
           ),
         ),
       ],
@@ -1101,30 +1147,6 @@ class _ProcessingPageState extends State<ProcessingPage>
             total: _conexaRows?.length ?? 0,
             buttonLabel: _resultRows.isEmpty ? 'Processar' : 'Processar novamente',
             primary: true,
-            extraContent: Row(
-              children: [
-                Switch(
-                  value: _autoOpenTicketOnDueToday,
-                  onChanged: (value) {
-                    setState(() {
-                      _autoOpenTicketOnDueToday = value;
-                    });
-                  },
-                ),
-                const SizedBox(width: 8),
-                const Expanded(
-                  child: Text(
-                    'Abrir ticket automaticamente (Vence hoje)',
-                    style: TextStyle(
-                      fontFamily: 'Inter',
-                      fontSize: 13,
-                      color: AppColors.textSecondary,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
-              ],
-            ),
             onPressed: (_loading || _loadingLocaliza || _localizaRows == null)
                 ? null
                 : _process,
