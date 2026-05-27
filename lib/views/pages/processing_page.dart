@@ -729,7 +729,6 @@ class _ProcessingPageState extends State<ProcessingPage>
 
       _resumeChargeIndex = index + 1;
     }
-  }
 
   void _showProcessErrorNotification() {
     if (!mounted) return;
