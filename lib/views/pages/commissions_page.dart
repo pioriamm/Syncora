@@ -62,6 +62,7 @@ class _CommissionsPageState extends State<CommissionsPage> {
   _GroupingMode _groupingMode = _GroupingMode.none;
   _GroupingSortMode _groupingSortMode = _GroupingSortMode.quantity;
   String _searchQuery = '';
+  bool _autoOpenTicketAutomatically = true;
   final TextEditingController _searchController = TextEditingController();
   List<Map<String, String>> _tenexJsonList = [];
   late final List<Map<String, String>> _commissionRatesByPartnerName =
@@ -794,6 +795,7 @@ class _CommissionsPageState extends State<CommissionsPage> {
                             Expanded(
                               child: TextField(
                                 controller: _searchController,
+                                cursorColor: AppColors.primary,
                                 onChanged: (value) => setState(() {
                                   _searchQuery = value;
                                   _currentPage = 0;
@@ -838,6 +840,30 @@ class _CommissionsPageState extends State<CommissionsPage> {
                                   ),
                                 ),
                               ),
+                            ),
+                            const SizedBox(width: 12),
+                            Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Switch(
+                                  value: _autoOpenTicketAutomatically,
+                                  onChanged: (value) {
+                                    setState(() {
+                                      _autoOpenTicketAutomatically = value;
+                                    });
+                                  },
+                                ),
+                                const SizedBox(width: 6),
+                                const Text(
+                                  'Abrir ticket automático',
+                                  style: TextStyle(
+                                    fontFamily: 'Inter',
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w600,
+                                    color: AppColors.textSecondary,
+                                  ),
+                                ),
+                              ],
                             ),
                             const SizedBox(width: 12),
                             _buildGroupingChip(

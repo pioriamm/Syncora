@@ -473,6 +473,7 @@ class _ProcessingPageState extends State<ProcessingPage>
       final fetchedConexaRows = <ConexaRow>[];
       final openedTicketsByGroup = <String, MovideskTicketInfo>{};
       final groupRowsSummary = <String, List<String>>{};
+      final saleNameCache = <String, String>{};
       final from = _startDate!.toIso8601String().split('T').first;
       final to = _endDate!.toIso8601String().split('T').first;
       final decoded = await _apiGet('$_apiBase/charges?status=unpaid&dueDateFrom=$from&dueDateTo=$to&limit=100');
@@ -480,16 +481,26 @@ class _ProcessingPageState extends State<ProcessingPage>
 
       for (final item in chargeItems.whereType<Map>()) {
         final customerId = (item['customerId'] ?? '').toString();
-        final salesDecoded = await _apiGet('$_apiBase/sales?customerId[]=$customerId&limit=100');
-        final salesItems = _parseApiResponse(salesDecoded).items;
-        final serviceItem = salesItems
-            .whereType<Map>()
-            .map((sale) => ((sale['product'] as Map?)?['name'] ?? '').toString().trim())
-            .firstWhere((name) => name.isNotEmpty, orElse: () => '');
-        final hasAllowedProduct = salesItems.whereType<Map>().any((sale) {
-          final productName = normalizeKey(((sale['product'] as Map?)?['name'] ?? '').toString());
-          return productName.isNotEmpty && !productName.contains('servico de adesao');
-        });
+        final salesIds = item['salesIds'];
+        final saleId = salesIds is List && salesIds.isNotEmpty
+            ? salesIds.first?.toString() ?? ''
+            : '';
+        var serviceItem = '';
+        if (saleId.isNotEmpty) {
+          serviceItem = saleNameCache[saleId] ?? '';
+          if (serviceItem.isEmpty) {
+            final saleDecoded = await _apiGet('$_apiBase/sale/$saleId');
+            if (saleDecoded is Map) {
+              serviceItem =
+                  ((saleDecoded['product'] as Map?)?['name'] ?? '').toString().trim();
+              if (serviceItem.isNotEmpty) {
+                saleNameCache[saleId] = serviceItem;
+              }
+            }
+          }
+        }
+        final hasAllowedProduct = serviceItem.isNotEmpty &&
+            !normalizeKey(serviceItem).contains('servico de adesao');
         if (!hasAllowedProduct) continue;
 
         final chargeId = (item['chargeId'] ?? item['id'] ?? '').toString();
