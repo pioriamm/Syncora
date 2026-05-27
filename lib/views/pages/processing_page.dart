@@ -1776,6 +1776,7 @@ class _ProcessingPageState extends State<ProcessingPage>
             width: 280,
             child: TextField(
               controller: _cnpjFilterController,
+              cursorColor: AppColors.successStrong,
               onChanged: (value) {
                 setState(() {
                   _cnpjFilter = value;
