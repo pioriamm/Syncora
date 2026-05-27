@@ -393,54 +393,47 @@ class _CommissionsPageState extends State<CommissionsPage> {
     return all;
   }
 
-  /// Busca product.name para uma lista de customerIds via endpoint sales.
-  /// Envia em lotes de até 20 IDs por chamada.
-  Future<Map<String, String>> _fetchProductNames(
-    Set<String> customerIds,
-    String dateFrom,
-    String dateTo,
+  /// Busca product.name a partir do primeiro `salesIds` retornado em cada charge.
+  Future<Map<String, String>> _fetchProductNamesByCharge(
+    List<Map<String, dynamic>> charges,
   ) async {
-    final productByCustomerId = <String, String>{};
-    const batchSize = 20;
-    final ids = customerIds.toList();
+    final productByChargeId = <String, String>{};
+    final saleNameCache = <String, String>{};
 
-    for (var i = 0; i < ids.length; i += batchSize) {
-      if (!mounted) return productByCustomerId;
-      final batch = ids.skip(i).take(batchSize).toList();
-      final idParams = batch.map((id) => 'customerId[]=$id').join('&');
-      final url =
-          '$_apiBase/sales?$idParams&dateFrom=$dateFrom&dateTo=$dateTo&limit=100';
+    for (var i = 0; i < charges.length; i++) {
+      if (!mounted) return productByChargeId;
+      final charge = charges[i];
+      final chargeId = charge['chargeId']?.toString() ?? '';
+      if (chargeId.isEmpty) continue;
 
-      setState(() =>
-          _status = 'Buscando serviço/item (${i + batch.length}/${ids.length} clientes)...');
+      final salesIds = charge['salesIds'];
+      if (salesIds is! List || salesIds.isEmpty) continue;
+      final saleId = salesIds.first?.toString() ?? '';
+      if (saleId.isEmpty) continue;
+
+      setState(() => _status =
+          'Buscando serviço/item (${i + 1}/${charges.length} cobranças)...');
 
       try {
-        var salesPage = 1;
-        while (true) {
-          final decoded = await _apiGet(
-            '$url&page=$salesPage',
-          );
-          final (:items, total: _) = _parseApiResponse(decoded);
-          for (final item in items) {
-            if (item is! Map<String, dynamic>) continue;
-            final cId = item['customerId']?.toString() ?? '';
-            if (cId.isEmpty || productByCustomerId.containsKey(cId)) continue;
-            final product = item['product'];
-            final name = product is Map
-                ? (product['name']?.toString() ?? '')
-                : '';
-            if (name.isNotEmpty) productByCustomerId[cId] = name;
-          }
-          if (items.length < 100) break;
-          salesPage++;
+        final cached = saleNameCache[saleId];
+        if (cached != null) {
+          productByChargeId[chargeId] = cached;
+          continue;
+        }
+        final decoded = await _apiGet('$_apiBase/sale/$saleId');
+        if (decoded is! Map<String, dynamic>) continue;
+        final product = decoded['product'];
+        final name = product is Map ? (product['name']?.toString() ?? '') : '';
+        if (name.isNotEmpty) {
+          saleNameCache[saleId] = name;
+          productByChargeId[chargeId] = name;
         }
       } catch (_) {
-        // Ignora erros parciais — o campo ficará N/A para os clientes afetados
+        // Ignora erros parciais — o campo ficará em branco para a cobrança afetada.
       }
-
-      await Future<void>.delayed(Duration.zero);
+      if (i % 20 == 0) await Future<void>.delayed(Duration.zero);
     }
-    return productByCustomerId;
+    return productByChargeId;
   }
 
   /// Para customerIds não encontrados no base_tenex, busca CNPJ e nome
@@ -537,9 +530,8 @@ class _CommissionsPageState extends State<CommissionsPage> {
           .where((id) => id.isNotEmpty)
           .toSet();
 
-      // 3. Busca product.name via endpoint sales
-      final productByCustomerId =
-          await _fetchProductNames(uniqueCustomerIds, dateFrom, dateTo);
+      // 3. Busca product.name via endpoint sale/{id} usando salesIds do charge
+      final productByChargeId = await _fetchProductNamesByCharge(allCharges);
       if (!mounted) return;
 
       // 4. Para IDs não encontrados no base_tenex, busca dados via /customer/{id}
@@ -561,7 +553,7 @@ class _CommissionsPageState extends State<CommissionsPage> {
         final row = _mapApiItemToRow(
           allCharges[i],
           tenexById,
-          productByCustomerId,
+          productByChargeId,
           customerApiData,
         );
         if (!mounted) return;
@@ -591,7 +583,7 @@ class _CommissionsPageState extends State<CommissionsPage> {
   AdminCobrancaRow _mapApiItemToRow(
     Map<String, dynamic> item,
     Map<String, Map<String, String>> tenexById,
-    Map<String, String> productByCustomerId,
+    Map<String, String> productByChargeId,
     Map<String, _CustomerApiData> customerApiData,
   ) {
     final customerId = item['customerId']?.toString() ?? '';
@@ -624,8 +616,8 @@ class _CommissionsPageState extends State<CommissionsPage> {
     final customSistema = _tenexValueOrCurrent(tenex, 'customSistema', '');
     final percentualComissao = _tenexValueOrCurrent(tenex, 'percentualComissao', '');
 
-    // product.name vem do endpoint sales, buscado separadamente por customerId
-    final servicoItem = _normalizeServiceItem(productByCustomerId[customerId] ?? '');
+    final chargeId = item['chargeId']?.toString() ?? '';
+    final servicoItem = _normalizeServiceItem(productByChargeId[chargeId] ?? '');
 
     final rawAmount = item['amount'];
     final rawPaid = item['paidAmount'];
@@ -802,6 +794,7 @@ class _CommissionsPageState extends State<CommissionsPage> {
                             Expanded(
                               child: TextField(
                                 controller: _searchController,
+                                cursorColor: AppColors.successStrong,
                                 onChanged: (value) => setState(() {
                                   _searchQuery = value;
                                   _currentPage = 0;
