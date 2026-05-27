@@ -30,6 +30,7 @@ class _ProcessingPageState extends State<ProcessingPage>
   final TextEditingController _cnpjFilterController = TextEditingController();
   String _cnpjFilter = '';
   bool _hasError = false;
+  String? _lastException;
   bool _autoOpenTicketOnDueToday = false;
   DateTime? _processStart;
   Duration _processElapsed = Duration.zero;
@@ -50,6 +51,8 @@ class _ProcessingPageState extends State<ProcessingPage>
   late final AnimationController _statusSpinController;
 
   List<OutputRow> _resultRows = [];
+  List<Map> _pendingChargeItems = [];
+  int _resumeChargeIndex = 0;
 
   @override
   void initState() {
@@ -467,8 +470,11 @@ class _ProcessingPageState extends State<ProcessingPage>
       _loading = true;
       _hasError = false;
       _status = '';
+      _lastException = null;
       _resultRows = [];
       _currentPage = 0;
+      _resumeChargeIndex = 0;
+      _pendingChargeItems = [];
     });
 
     try {
@@ -480,9 +486,65 @@ class _ProcessingPageState extends State<ProcessingPage>
       final from = _startDate!.toIso8601String().split('T').first;
       final to = _endDate!.toIso8601String().split('T').first;
       final decoded = await _apiGet('$_apiBase/charges?status=unpaid&dueDateFrom=$from&dueDateTo=$to&limit=100');
-      final chargeItems = _parseApiResponse(decoded).items;
+      _pendingChargeItems = _parseApiResponse(decoded).items.whereType<Map>().toList();
 
-      for (final item in chargeItems.whereType<Map>()) {
+      await _processChargeItems(
+        localizaMap: localizaMap,
+        localizaMapById: localizaMapById,
+        fetchedConexaRows: fetchedConexaRows,
+        openedTicketsByGroup: openedTicketsByGroup,
+        groupRowsSummary: groupRowsSummary,
+      );
+
+      if (!mounted) return;
+      setState(() {
+        _conexaRows = fetchedConexaRows;
+        _conexaName = 'API Charges + Sales';
+        _status = '';
+      });
+    } on ProcessingException catch (e) {
+      if (mounted) {
+        setState(() {
+          _hasError = true;
+          _lastException = e.toString();
+          _status = e.message;
+        });
+        _showProcessErrorNotification();
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _hasError = true;
+          _lastException = e.toString();
+          _status =
+              'Ocorreu um erro inesperado ao processar os arquivos. Verifique se as planilhas estão no layout correto e tente novamente.';
+        });
+        _showProcessErrorNotification();
+      }
+    } finally {
+      _processTimer?.cancel();
+      _processTimer = null;
+      if (_processStart != null) {
+        _processElapsed = DateTime.now().difference(_processStart!);
+      }
+      if (mounted) {
+        setState(() {
+          _loading = false;
+        });
+      }
+    }
+  }
+
+  Future<void> _processChargeItems({
+    required Map<String, LocalizaRow> localizaMap,
+    required Map<String, LocalizaRow> localizaMapById,
+    required List<ConexaRow> fetchedConexaRows,
+    required Map<String, MovideskTicketInfo> openedTicketsByGroup,
+    required Map<String, List<String>> groupRowsSummary,
+  }) async {
+    for (var index = _resumeChargeIndex; index < _pendingChargeItems.length; index++) {
+      _resumeChargeIndex = index;
+      final item = _pendingChargeItems[index];
         final customerId = (item['customerId'] ?? '').toString();
         final chargeSalesIds = item['salesIds'];
         final firstSaleId = chargeSalesIds is List && chargeSalesIds.isNotEmpty
@@ -665,29 +727,63 @@ class _ProcessingPageState extends State<ProcessingPage>
         });
       }
 
+      _resumeChargeIndex = index + 1;
+    }
+  }
+
+  void _showProcessErrorNotification() {
+    if (!mounted) return;
+    final messenger = ScaffoldMessenger.of(context);
+    messenger.hideCurrentSnackBar();
+    messenger.showSnackBar(
+      SnackBar(
+        content: Text(
+          'Erro ao buscar dados. Exceção: ${_lastException ?? 'não identificada'}.',
+        ),
+        duration: const Duration(seconds: 10),
+        action: SnackBarAction(
+          label: 'Retentar',
+          onPressed: _retryProcessFromFailure,
+        ),
+      ),
+    );
+  }
+
+  Future<void> _retryProcessFromFailure() async {
+    if (_loading || _pendingChargeItems.isEmpty) return;
+
+    setState(() {
+      _loading = true;
+      _hasError = false;
+      _status = 'Retentando processamento a partir do ponto de falha...';
+      _lastException = null;
+    });
+
+    try {
+      final localizaMap = _localizaRows ?? const <String, LocalizaRow>{};
+      final localizaMapById = _localizaRowsById ?? const <String, LocalizaRow>{};
+      final fetchedConexaRows = _conexaRows ?? <ConexaRow>[];
+
+      await _processChargeItems(
+        localizaMap: localizaMap,
+        localizaMapById: localizaMapById,
+        fetchedConexaRows: fetchedConexaRows,
+        openedTicketsByGroup: <String, MovideskTicketInfo>{},
+        groupRowsSummary: <String, List<String>>{},
+      );
       if (!mounted) return;
       setState(() {
-        _conexaRows = fetchedConexaRows;
-        _conexaName = 'API Charges + Sales';
         _status = '';
       });
-    } on ProcessingException catch (e) {
-      setState(() {
-        _hasError = true;
-        _status = e.message;
-      });
     } catch (e) {
+      if (!mounted) return;
       setState(() {
         _hasError = true;
-        _status =
-            'Ocorreu um erro inesperado ao processar os arquivos. Verifique se as planilhas estão no layout correto e tente novamente.';
+        _lastException = e.toString();
+        _status = 'Falha ao retentar processamento.';
       });
+      _showProcessErrorNotification();
     } finally {
-      _processTimer?.cancel();
-      _processTimer = null;
-      if (_processStart != null) {
-        _processElapsed = DateTime.now().difference(_processStart!);
-      }
       if (mounted) {
         setState(() {
           _loading = false;
