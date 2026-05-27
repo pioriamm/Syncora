@@ -728,7 +728,6 @@ class _ProcessingPageState extends State<ProcessingPage>
       }
 
     }
-    _resumeChargeIndex = _pendingChargeItems.length;
 
   void _showProcessErrorNotification() {
     if (!mounted) return;
