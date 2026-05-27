@@ -235,7 +235,7 @@ class _LoginPageState extends State<LoginPage> {
                   height: 22,
                   child: CircularProgressIndicator(
                     strokeWidth: 2,
-                    color: Color(0xFF062F38),
+                    color: Color(0xFFD6E600),
                   ),
                 )
                     : const Text(
@@ -355,6 +355,7 @@ class _LoginPageState extends State<LoginPage> {
         const SizedBox(height: 8),
 
         TextFormField(
+          cursorColor: Color(0xFFD6E600),
           controller: controller,
           obscureText: obscure,
           validator: validator,
